@@ -1,0 +1,9 @@
+# Downloaded / derived data is reproducible from the scripts — keep it out of git.
+data/cache/
+
+# R session cruft
+.Rhistory
+.RData
+.Rproj.user/
+
+# Keep bundled source data (data/*.csv) and rendered output/ committed.
