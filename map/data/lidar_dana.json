@@ -1,1 +1,1 @@
-{"image":"lidar_dana.png","bounds":[[42.42670,-72.28530],[42.43670,-72.27130]],"source":"USGS 3DEP 1 m LiDAR bare earth"}
+{"image":"lidar_dana.png","bounds":[[42.42670,-72.28530],[42.43670,-72.27130]],"source":"USGS 3DEP 1 m LiDAR bare earth (hillshade + local relief)"}

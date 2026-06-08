@@ -32,7 +32,7 @@ present-day map in which their land has been absorbed by the surrounding towns.
 | 13 | `13_terrain3d.png` | 3D view of the valley and reservoir | DEM (`persp`) |
 | 14 | `14_dana_lidar.png` | Dana Common in 1 m LiDAR (surviving town site) | USGS 3DEP LiDAR |
 | 15 | `15_prescott_lidar.png` | The Prescott Peninsula in 1 m LiDAR | USGS 3DEP LiDAR |
-| 16 | `16_roads.png` | Road connectivity ~1893 (towns to neighbours) | 1893 USGS quad (schematic) |
+| 16 | `16_roads.png` | The valley's 1893 road network, with the reservoir overlaid | 1893 USGS quad |
 
 Plus a **reservoir-filling animation** (`quabbin_floodfill.gif`) and an
 **interactive Leaflet map** in [`map/`](map/): an adjustable pool level, the 1893
@@ -155,14 +155,19 @@ never breaks the run — it degrades to a documented fallback instead.
   fade overlay in the interactive map.
 - **LiDAR of the surviving sites** (`12_lidar.R`) — 1 m bare-earth LiDAR from the
   USGS 3DEP dynamic elevation service (public domain) for Dana Common and the
-  Prescott Peninsula, the two areas above the full pool. Low-sun hillshades reveal
-  old commons, road traces, and cellar holes; exported as land-only overlays
-  (transparent over water) for the map. Submerged areas are not shown: the
-  buildings were demolished and LiDAR cannot penetrate water.
-- **Road connectivity** (`13_roads.R`) — a schematic of the principal roads linking
-  the four towns and their neighbours, drawn from the 1893 quad. Node positions are
-  town centres and links are not exact alignments (the precise roads are in the
-  1893 overlay).
+  Prescott Peninsula, the two areas above the full pool. A denoised low-sun
+  hillshade carries the terrain; a local relief model (elevation minus its local
+  mean) then flags genuine depressions deeper than ~0.5 m — cellar holes and road
+  cuts — in red, with a slope mask so natural gullies on the flanks aren't false-
+  flagged. Exported as land-only overlays (transparent over water) for the map.
+  Submerged areas are not shown: the buildings were demolished and LiDAR cannot
+  penetrate water, and the conservative threshold under-flags rather than fills the
+  frame with canopy noise.
+- **The valley's road network** (`13_roads.R`) — renders the real Swift River
+  Valley roads from the georeferenced 1893 USGS Belchertown quadrangle, with the
+  present reservoir overlaid in blue so you can see which roads and villages
+  drowned. The four town centres are marked and the routes out to the surviving
+  neighbours are labelled at the frame edges.
 - **Interactive map** — Leaflet (vendored locally, no CDN dependency) over Esri
   World Hillshade + CARTO label tiles, consuming the exported GeoJSON, the 1893
   overlay, and the LiDAR overlays. The basemap tiles need internet; every layer the
