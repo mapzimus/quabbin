@@ -59,7 +59,7 @@
 
 <div id="intro" class="panel">
   <h1>Quabbin Reservoir: the lost towns</h1>
-  <p>Between 1938 and 1946 the Swift River Valley was flooded to create the Quabbin Reservoir, disincorporating four towns — <b>Dana, Enfield, Greenwich, Prescott</b> — to supply metropolitan Boston. Use the slider to raise the pool from the valley floor to the 530&nbsp;ft full pool of 1946; toggle the 1893 map to compare.</p>
+  <p>Between 1938 and 1946 the Swift River Valley was flooded to create the Quabbin Reservoir, disincorporating four towns — <b>Dana, Enfield, Greenwich, Prescott</b> — to supply metropolitan Boston. Use the slider to raise the pool to the 530&nbsp;ft full pool of 1946; toggle the 1893 map, or the LiDAR of the sites that stayed above water (Dana Common, the Prescott Peninsula).</p>
   <div class="links">
     <a href="../../quabbin.html">&larr; The full study</a>
     <a href="https://github.com/mapzimus/maxwellhowegis/tree/main/quabbin" target="_blank" rel="noopener">R code &#8599;</a>
@@ -69,6 +69,8 @@
 <div id="views" class="panel">
   <button id="vValley">⌖ The valley</button>
   <button id="vGoes">→ Where the water goes</button>
+  <button id="vDana">▦ Dana Common (LiDAR)</button>
+  <button id="vPrescott">▦ Prescott Pen. (LiDAR)</button>
 </div>
 
 <div id="histctl" class="panel">
@@ -83,6 +85,7 @@
   <div class="row"><span class="sw" style="background:#fff;border-color:#1a1a1a"></span> Drowned town</div>
   <div class="row"><span class="sw" style="background:#1f6fb0"></span> Aqueduct &rarr; Boston</div>
   <div class="row"><span class="sw" style="background:#cdb892"></span> 1893 USGS map (toggle)</div>
+  <div class="row"><span class="sw" style="background:#9a9a9a"></span> LiDAR of surviving sites</div>
 </div>
 
 <div id="flood" class="panel">
@@ -106,6 +109,9 @@ map.getPane("labels").style.pointerEvents = "none";
 // historic map sits above the basemap but below the vector overlays
 map.createPane("hist");
 map.getPane("hist").style.zIndex = 350;
+// LiDAR sits just above the 1893 map, still below the vector overlays
+map.createPane("lidar");
+map.getPane("lidar").style.zIndex = 360;
 
 const relief = L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",
@@ -180,10 +186,22 @@ Promise.all([
   }
 
   // overlay toggle control
-  L.control.layers(
+  const layerCtl = L.control.layers(
     { "Shaded relief":reliefBase, "Plain map":plain },
     layers, {collapsed:false, position:"bottomleft"}
   ).addTo(map);
+
+  // LiDAR overlays of the surviving sites (PNG, transparent over water)
+  [ {f:"lidar_dana",     n:"LiDAR: Dana Common",        btn:"vDana"},
+    {f:"lidar_prescott", n:"LiDAR: Prescott Peninsula", btn:"vPrescott"} ].forEach(s=>{
+    fetch(DATA+s.f+".json").then(r=>r.ok?r.json():null).then(meta=>{
+      if(!meta) return;
+      const ov = L.imageOverlay(DATA+meta.image, meta.bounds, {opacity:0.92, pane:"lidar"});
+      layerCtl.addOverlay(ov, s.n);
+      const b = document.getElementById(s.btn);
+      if(b) b.onclick = ()=>{ ov.addTo(map); map.fitBounds(meta.bounds, {padding:[40,40]}); };
+    }).catch(()=>{});
+  });
 });
 
 // --- pre-flood 1893 map overlay (fade between then and now) ---
