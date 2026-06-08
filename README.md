@@ -1,17 +1,15 @@
-# Quabbin: a valley chosen, four towns erased
+# The Quabbin Reservoir and the Lost Towns of the Swift River Valley
 
-A small, reproducible **R** GIS study of the Quabbin Reservoir, Massachusetts —
-the reservoir created between 1938 and 1946 by deliberately flooding four
-disincorporated towns of the Swift River Valley: **Dana, Enfield, Greenwich,
-and Prescott.** Around 2,500 people were displaced so that Boston, 65 miles
-east, could drink.
+A reproducible **R** GIS study of the Quabbin Reservoir, Massachusetts, created
+between 1938 and 1946 by damming and flooding the Swift River Valley. Four towns
+— **Dana, Enfield, Greenwich, and Prescott** — were disincorporated on 28 April
+1938 and about 2,500 residents were relocated; the reservoir supplies
+metropolitan Boston, roughly 100 km (65 miles) to the east.
 
-It is built as a *multi-layer study* in the spirit of the "Cairo test": several
-spatial layers that, read together, converge on one story —
-
-> The terrain made the valley an obvious basin; the state filled it; four
-> towns vanished from the map and their land was parcelled out to the
-> survivors that ring the water today.
+It is a *multi-layer study*: several spatial layers that, read together, describe
+how the reservoir was sited and what it replaced — a valley whose terrain forms a
+natural basin, four towns that had been losing population for decades, and a
+present-day map in which their land has been absorbed by the surrounding towns.
 
 ![Hero map](output/08_hero.png)
 
@@ -19,22 +17,26 @@ spatial layers that, read together, converge on one story —
 
 | # | Figure | What it shows | Source |
 |---|--------|---------------|--------|
-| 1 | `01_locator.png` | Where the reservoir sits in Massachusetts | TIGER + DEM-derived water |
-| 2 | `02_dem_hillshade.png` | The Swift River Valley basin — the terrain that made it a reservoir | AWS Terrain Tiles (elevatr) |
-| 3 | `03_reservoir_towns.png` | The four drowned towns over the water that replaced them | DEM + bundled town points |
-| 4 | `04_watershed.png` | The reservoir nested inside its drainage (regional context) | USGS WBD HUC-10 |
-| 5 | `05_erasure.png` | The towns are gone; their land divided among surviving municipalities | TIGER municipalities |
-| 6 | `06_town_lifelines.png` | Four towns chartered across three centuries, all dissolved on one day | town charter records |
-| 7 | `07_population_decline.png` | Every town already shrinking — **real decennial census counts, 1900–1920** | US Census 1920 (Number of Inhabitants) |
-| 8 | `08_hero.png` | Terrain + water + the vanished towns, together | all of the above |
-| 9 | `09_floodfill.png` | The valley drowning stage by stage, up to the 530-ft full pool | DEM |
-| 10 | `10_aqueduct.png` | Where the water goes — the aqueduct ~100 km east to Boston | hand-placed coordinates |
+| 1 | `01_locator.png` | The reservoir's location in Massachusetts | TIGER + DEM-derived water |
+| 2 | `02_dem_hillshade.png` | The Swift River Valley basin (shaded relief) | AWS Terrain Tiles (elevatr) |
+| 3 | `03_reservoir_towns.png` | The four former towns over the present reservoir | DEM + town points |
+| 4 | `04_watershed.png` | The reservoir within its drainage (regional context) | USGS WBD HUC-10 |
+| 5 | `05_erasure.png` | The former town land, now divided among surrounding towns | TIGER municipalities |
+| 6 | `06_town_lifelines.png` | Each town's span, charter to the 1938 disincorporation | town records |
+| 7 | `07_population_decline.png` | Decennial census population, 1900–1920 | US Census 1920 (Number of Inhabitants) |
+| 8 | `08_hero.png` | Terrain, reservoir, and the former town sites together | all of the above |
+| 9 | `09_floodfill.png` | The reservoir filling in stages to the 530-ft full pool | DEM |
+| 10 | `10_aqueduct.png` | The aqueduct route, ~100 km east to Boston | hand-placed coordinates |
+| 11 | `11_crosssection.png` | West-east valley cross-section at the 530-ft pool | DEM |
+| 12 | `12_losses.png` | "By the numbers": what was removed and what is supplied | MWRA / DCR / histories |
+| 13 | `13_terrain3d.png` | 3D view of the valley and reservoir | DEM (`persp`) |
 
-Plus a **flood-fill animation** (`quabbin_floodfill.gif`) and an **interactive
-Leaflet map** in [`map/`](map/) — drag a slider to raise the water over the
-towns, read each town's census history, and follow the aqueduct east to Boston.
+Plus a **reservoir-filling animation** (`quabbin_floodfill.gif`) and an
+**interactive Leaflet map** in [`map/`](map/): an adjustable pool level, the 1893
+USGS pre-reservoir quadrangle as a fade overlay, per-town census popups, and the
+aqueduct route east to Boston.
 
-![Filling the valley](output/quabbin_floodfill.gif)
+![Filling the reservoir](output/quabbin_floodfill.gif)
 
 ## Running it
 
@@ -54,10 +56,10 @@ Rscript quabbin/run_all.R
 ```
 
 Downloads are cached under `quabbin/data/cache/` (git-ignored), so the first
-run takes a few minutes and every run after that is ~30 seconds. The ten
-figures and the GIF land in `quabbin/output/`; the web-map GeoJSON lands in
-`quabbin/map/data/`. (The GIF needs ImageMagick — `apt-get install imagemagick`;
-without it the pipeline still produces the small-multiples panel `09`.)
+run takes a few minutes and every run after that is ~40 seconds. The thirteen
+figures and the GIF land in `quabbin/output/`; the web-map GeoJSON and the 1893
+overlay land in `quabbin/map/data/`. (The GIF needs ImageMagick — `apt-get
+install imagemagick`; without it the pipeline still produces the panel `09`.)
 
 The interactive map is static files — serve `quabbin/map/` over HTTP, e.g.
 `python3 -m http.server --directory quabbin/map`, then open `localhost:8000`.
@@ -73,14 +75,18 @@ quabbin/
 │   ├── 02_build_layers.R  reproject, hillshade, carve the reservoir, assemble layers
 │   ├── 03_maps.R          the six spatial figures (shaded relief + vector overlays)
 │   ├── 04_population.R    the two displacement charts (real census + lifelines)
-│   ├── 05_floodfill.R     flood-fill frames + GIF + small-multiples + stage GeoJSON
+│   ├── 05_floodfill.R     reservoir-filling frames + GIF + small-multiples + stage GeoJSON
 │   ├── 06_aqueduct.R      the aqueduct-to-Boston map + infrastructure GeoJSON
-│   └── 07_export_web.R    export towns/reservoir/watershed GeoJSON for the web map
+│   ├── 07_export_web.R    export towns/reservoir/watershed GeoJSON for the web map
+│   ├── 08_profile.R       west-east valley cross-section
+│   ├── 09_losses.R        the "by the numbers" figure
+│   ├── 10_terrain3d.R     3D terrain view (base-R persp)
+│   └── 11_preflood.R      process the 1893 USGS quad into the web overlay
 ├── data/
 │   ├── drowned_towns.csv  the four towns: location, county, charter & end dates
 │   └── town_population.csv real US Census counts 1900–1920 + peaks + 1938 dissolution
 ├── map/                   interactive Leaflet map (index.html + vendored Leaflet)
-│   └── data/              GeoJSON the map consumes (generated by 05/06/07)
+│   └── data/              GeoJSON + 1893 overlay (generated by 05–11)
 └── output/                the rendered figures + GIF (committed)
 ```
 
@@ -116,19 +122,35 @@ never breaks the run — it degrades to a documented fallback instead.
   reservoir. Earlier peaks (Enfield ~1,100 in 1850, Prescott ~750 in 1830) and
   the 1938 dissolution (~2,500 displaced in all) are shown as annotated context,
   not plotted as census points. All four disincorporated **28 April 1938**.
-- **Flood-fill** — `05_floodfill.R` raises the pool up the DEM in even steps from
-  the valley floor to the 530-ft full pool, carving the largest contiguous
-  waterbody at each level → frames → GIF (ImageMagick) + a small-multiples panel,
-  with the stage polygons exported as GeoJSON for the web slider. It is framed by
-  pool *elevation* (the real 1939→1946 fill window is annotated), not surveyed
-  year-by-year stage data.
+- **Reservoir-filling animation** — `05_floodfill.R` carves the full-pool
+  footprint once, then fills it in **equal-area stages** on a lightly smoothed DEM
+  (the broad, shallow basin would otherwise flood most of its area in the final
+  elevation step). Frames become a GIF (ImageMagick) and a small-multiples panel,
+  and the per-stage polygons are exported as GeoJSON for the map slider. Stages
+  are by pool level / area, not surveyed year-by-year fill data (the real fill
+  window, 1939–1946, is annotated).
 - **Aqueduct & dams** — the route (Quabbin → Wachusett → Boston) and the dams
   (Winsor Dam, Goodnough Dike) are **hand-placed from known coordinates** and
-  labeled schematic; they convey the ~100 km eastward journey of the water, not a
+  labeled schematic; they convey the ~100 km eastward course of the water, not a
   surveyed alignment.
+- **Cross-section** (`08_profile.R`) — a west-east transect of the DEM at the
+  reservoir's widest point. The DEM retains sub-pool relief of the drowned valley,
+  but its underwater values are approximate, so the figure cites the surveyed
+  maximum depth (~150 ft) rather than asserting DEM depths.
+- **By the numbers** (`09_losses.R`) — documented quantities (surface area,
+  volume, shoreline, displaced residents, relocated graves, buildings razed,
+  people supplied) compiled from MWRA, Massachusetts DCR, and regional histories;
+  several vary by source and are shown with ranges.
+- **3D view** (`10_terrain3d.R`) — base-R `persp()` (no GPU required), with the
+  reservoir drawn as a flat pool over the relief.
+- **Pre-reservoir map** (`11_preflood.R`) — the 1893 USGS Belchertown 15-minute
+  quadrangle (Historical Topographic Map Collection, public domain), reprojected
+  to EPSG:4326, cropped to the neatline, and exported as a JPEG + bounds for the
+  fade overlay in the interactive map.
 - **Interactive map** — Leaflet (vendored locally, no CDN dependency) over Esri
-  World Hillshade + CARTO label tiles, consuming the exported GeoJSON. The basemap
-  tiles need internet; every layer the study itself produces is served locally.
+  World Hillshade + CARTO label tiles, consuming the exported GeoJSON and the 1893
+  overlay. The basemap tiles need internet; every layer the study itself produces
+  is served locally.
 
 ## Stack
 

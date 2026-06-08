@@ -20,7 +20,7 @@ bb     <- st_bbox(aoi_ma)
 coordf <- coord_sf(crs = st_crs(CRS_MA), xlim = c(bb["xmin"], bb["xmax"]),
                    ylim = c(bb["ymin"], bb["ymax"]), expand = FALSE, datum = NA)
 
-# Carve the main waterbody at a given pool elevation (metres): land <= level,
+# Carve the main reservoir body at a pool elevation (metres): land <= level,
 # largest contiguous component, clipped to the study window.
 carve <- function(level) {
   m <- terra::ifel(dem_ma <= level, 1, NA)
@@ -29,16 +29,38 @@ carve <- function(level) {
   st_intersection(st_union(st_geometry(p)), st_geometry(aoi_ma))
 }
 
-# Even elevation steps from just above the valley floor up to full pool, so
-# each frame visibly raises the water (a linear sweep, not quantiles which
-# bunch up near the broad rim).
-uw     <- terra::values(dem_ma); uw <- uw[!is.na(uw) & uw <= POOL_M]
-floor  <- as.numeric(quantile(uw, 0.05))
-levels <- seq(floor, POOL_M, length.out = 10)
-msg("flood stages (m): %s", paste(round(levels, 1), collapse = ", "))
+# The full-pool footprint, carved once. Every stage then fills WITHIN this fixed
+# footprint, so the animation is strictly monotonic (no flicker from a per-stage
+# "largest blob" flipping between components).
+reservoir_full <- st_make_valid(carve(POOL_M))
+area_full      <- as.numeric(st_area(reservoir_full))
+.fpv           <- terra::vect(st_sf(geometry = reservoir_full))
+dem_res        <- terra::mask(dem_ma, .fpv)
+# De-quantise the integer-metre DEM: the valley floor has broad benches at whole
+# metres (e.g. ~40% of the footprint at 157 m & 159 m), which would collapse the
+# area-quantiles onto a couple of levels. Light smoothing recovers the gentle
+# underlying slope so the surface fills gradually instead of in two big steps.
+dem_res        <- terra::mask(terra::focal(dem_res, w = 15, fun = mean, na.rm = TRUE), .fpv)
 
-water_list <- lapply(levels, carve)
-area_full  <- as.numeric(st_area(water_list[[length(water_list)]]))
+# Step by EQUAL AREA, not equal elevation: each frame floods about the same extra
+# surface. Quabbin is a broad, shallow basin, so equal-elevation steps dump most
+# of the area into the final frame (the old 33% -> 100% jump). Area quantiles of
+# the footprint's hypsometry spread the fill evenly instead.
+N      <- 16
+vals   <- terra::values(dem_res); vals <- vals[!is.na(vals) & vals <= POOL_M]
+levels <- as.numeric(quantile(vals, probs = seq(1 / N, 1, length.out = N)))
+levels <- sort(unique(round(levels, 1)))      # drop levels that collapse onto the same bench
+levels[length(levels)] <- POOL_M
+msg("flood stages (%d, m): %s", length(levels), paste(round(levels, 1), collapse = ", "))
+
+# Water inside the footprint at a given level (subset of the next level by design).
+carve_fill <- function(level) {
+  m <- terra::ifel(dem_res <= level, 1, NA)
+  if (all(is.na(terra::values(m)))) return(reservoir_full)
+  st_make_valid(st_union(sf::st_as_sf(terra::as.polygons(m, dissolve = TRUE))))
+}
+water_list <- lapply(levels, carve_fill)
+water_list[[length(water_list)]] <- reservoir_full   # final frame == full footprint (exactly 100%)
 
 frame_plot <- function(water, level) {
   pct  <- round(as.numeric(st_area(water)) / area_full * 100)

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Quabbin — Interactive Map | Maxwell Howe GIS</title>
-<meta name="description" content="Interactive map of the Quabbin Reservoir: raise the water stage by stage over the four drowned towns of the Swift River Valley, and follow the aqueduct east to Boston.">
+<meta name="description" content="Interactive map of the Quabbin Reservoir: raise the pool in stages over the four former towns of the Swift River Valley, compare the 1893 pre-reservoir map, and follow the aqueduct east to Boston.">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -37,6 +37,12 @@
   #views button{border:1px solid #d9d9d9;background:#fff;border-radius:6px;font-size:12px;
                 padding:7px 10px;cursor:pointer;font-weight:600;color:#333;text-align:left}
   #views button:hover{background:#f2f6fb;border-color:var(--water);color:var(--water)}
+  /* historic-map control */
+  #histctl{top:104px;right:14px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;max-width:172px}
+  #histctl label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#333;cursor:pointer}
+  #histctl input[type=range]{width:100%;accent-color:#8a5a2b}
+  #histctl input[type=range]:disabled{opacity:.4}
+  #histctl .src{font-size:10px;color:#999;line-height:1.3}
   /* legend */
   #legend{bottom:22px;right:14px;padding:10px 12px;font-size:11.5px;line-height:1.7}
   #legend .row{display:flex;align-items:center;gap:8px}
@@ -52,8 +58,8 @@
 <div id="map"></div>
 
 <div id="intro" class="panel">
-  <h1>Quabbin: a valley drowned</h1>
-  <p>In 1938 four towns — <b>Dana, Enfield, Greenwich, Prescott</b> — were disincorporated and the Swift River Valley flooded to supply Boston. Drag the slider to raise the water over the towns; the water fills from the valley floor to the 530&nbsp;ft full pool of 1946.</p>
+  <h1>Quabbin Reservoir: the lost towns</h1>
+  <p>Between 1938 and 1946 the Swift River Valley was flooded to create the Quabbin Reservoir, disincorporating four towns — <b>Dana, Enfield, Greenwich, Prescott</b> — to supply metropolitan Boston. Use the slider to raise the pool from the valley floor to the 530&nbsp;ft full pool of 1946; toggle the 1893 map to compare.</p>
   <div class="links">
     <a href="../../quabbin.html">&larr; The full study</a>
     <a href="https://github.com/mapzimus/maxwellhowegis/tree/main/quabbin" target="_blank" rel="noopener">R code &#8599;</a>
@@ -65,11 +71,18 @@
   <button id="vGoes">→ Where the water goes</button>
 </div>
 
+<div id="histctl" class="panel">
+  <label><input type="checkbox" id="histToggle"> 1893 map (pre-flood)</label>
+  <input id="histOpacity" type="range" min="0" max="100" value="80" disabled aria-label="Historic map opacity">
+  <div class="src">USGS Belchertown quad, 1893</div>
+</div>
+
 <div id="legend" class="panel">
   <div class="row"><span class="sw" style="background:#2b6cb0"></span> Reservoir / rising pool</div>
   <div class="row"><span class="sw" style="background:#2a9d8f;opacity:.4"></span> Watershed (USGS HUC-10)</div>
   <div class="row"><span class="sw" style="background:#fff;border-color:#1a1a1a"></span> Drowned town</div>
   <div class="row"><span class="sw" style="background:#1f6fb0"></span> Aqueduct &rarr; Boston</div>
+  <div class="row"><span class="sw" style="background:#cdb892"></span> 1893 USGS map (toggle)</div>
 </div>
 
 <div id="flood" class="panel">
@@ -90,6 +103,9 @@ const map = L.map("map", { zoomControl:true, minZoom:8, maxZoom:15 }).setView([4
 map.createPane("labels");
 map.getPane("labels").style.zIndex = 450;
 map.getPane("labels").style.pointerEvents = "none";
+// historic map sits above the basemap but below the vector overlays
+map.createPane("hist");
+map.getPane("hist").style.zIndex = 350;
 
 const relief = L.tileLayer(
   "https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",
@@ -135,7 +151,9 @@ Promise.all([
 
   if(floodstages){
     floodFeatures = floodstages.features.sort((a,b)=>a.properties.stage-b.properties.stage);
-    setStage(10);
+    slider.max = floodFeatures.length;
+    slider.value = floodFeatures.length;
+    setStage(floodFeatures.length);
   }
 
   if(aqueduct||infra){
@@ -168,6 +186,19 @@ Promise.all([
   ).addTo(map);
 });
 
+// --- pre-flood 1893 map overlay (fade between then and now) ---
+fetch(DATA+"preflood.json").then(r=>r.ok?r.json():null).then(meta=>{
+  if(!meta) return;
+  const ov = L.imageOverlay(DATA+meta.image, meta.bounds, {opacity:0.8, pane:"hist"});
+  const tog = document.getElementById("histToggle");
+  const op  = document.getElementById("histOpacity");
+  tog.addEventListener("change", ()=>{
+    if(tog.checked){ ov.addTo(map); op.disabled=false; }
+    else { map.removeLayer(ov); op.disabled=true; }
+  });
+  op.addEventListener("input", ()=> ov.setOpacity(+op.value/100));
+}).catch(()=>{});
+
 // --- flood slider ---
 function setStage(stage){
   const f = floodFeatures.find(x=>x.properties.stage===stage);
@@ -175,7 +206,7 @@ function setStage(stage){
   floodLayer.clearLayers().addData(f);
   const p=f.properties;
   document.getElementById("readout").textContent =
-    `${p.pool_ft} ft · ${p.pct}% full` + (stage===10 ? " (1946)" : "");
+    `${p.pool_ft} ft · ${p.pct}% full` + (stage===floodFeatures.length ? " (1946)" : "");
 }
 const slider=document.getElementById("slider");
 slider.addEventListener("input",e=>setStage(+e.target.value));
@@ -184,13 +215,14 @@ let timer=null;
 document.getElementById("play").addEventListener("click",function(){
   if(timer){ clearInterval(timer); timer=null; this.textContent="▶ Play"; return; }
   this.textContent="❚❚ Pause";
-  let s = (+slider.value>=10)?1:+slider.value;
+  const last = floodFeatures.length || 1;
+  let s = (+slider.value>=last)?1:+slider.value;
   slider.value=s; setStage(s);
   timer=setInterval(()=>{
     s++;
-    if(s>10){ clearInterval(timer); timer=null; document.getElementById("play").textContent="▶ Play"; return; }
+    if(s>last){ clearInterval(timer); timer=null; document.getElementById("play").textContent="▶ Play"; return; }
     slider.value=s; setStage(s);
-  },650);
+  },550);
 });
 
 // --- view buttons ---

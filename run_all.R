@@ -24,6 +24,10 @@ source(file.path(QB_DIR, "R", "04_population.R"))
 source(file.path(QB_DIR, "R", "05_floodfill.R"))
 source(file.path(QB_DIR, "R", "06_aqueduct.R"))
 source(file.path(QB_DIR, "R", "07_export_web.R"))
+source(file.path(QB_DIR, "R", "08_profile.R"))
+source(file.path(QB_DIR, "R", "09_losses.R"))
+source(file.path(QB_DIR, "R", "10_terrain3d.R"))
+source(file.path(QB_DIR, "R", "11_preflood.R"))
 
 pngs <- list.files(DIR_OUTPUT, pattern = "\\.png$")
 msg("DONE in %.0f s - %d figure(s) in %s",
