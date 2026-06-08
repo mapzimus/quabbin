@@ -1,6 +1,9 @@
 # Downloaded / derived data is reproducible from the scripts — keep it out of git.
 data/cache/
 
+# Intermediate flood-fill frames — the committed deliverable is the GIF (output/quabbin_floodfill.gif)
+output/floodfill_frames/
+
 # R session cruft
 .Rhistory
 .RData

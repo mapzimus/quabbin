@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quabbin — Interactive Map | Maxwell Howe GIS</title>
+<meta name="description" content="Interactive map of the Quabbin Reservoir: raise the water stage by stage over the four drowned towns of the Swift River Valley, and follow the aqueduct east to Boston.">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#1a1a1a; --water:#2b6cb0; --line:#0b3d66; --red:#7a1f1f; }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:Inter,system-ui,sans-serif;color:var(--ink)}
+  #map{position:absolute;inset:0;background:#dfe3e6}
+  .panel{position:absolute;z-index:1000;background:rgba(255,255,255,.94);
+         border:1px solid #d9d9d9;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.12)}
+  /* intro */
+  #intro{top:14px;left:14px;max-width:330px;padding:16px 18px}
+  #intro h1{margin:0 0 6px;font-size:18px;letter-spacing:-.01em}
+  #intro p{margin:0 0 8px;font-size:12.5px;line-height:1.5;color:#444}
+  #intro .links{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  #intro a{font-size:12px;color:var(--water);text-decoration:none;font-weight:600}
+  #intro a:hover{text-decoration:underline}
+  .muted{color:#888}
+  /* flood control */
+  #flood{bottom:22px;left:50%;transform:translateX(-50%);
+         padding:12px 18px;display:flex;align-items:center;gap:14px;min-width:min(560px,92vw)}
+  #flood .lab{font-size:12px;color:#555;white-space:nowrap}
+  #flood .read{font-weight:700;font-size:13px;color:var(--line);white-space:nowrap;min-width:140px}
+  #flood input[type=range]{flex:1;accent-color:var(--water)}
+  #flood button{border:0;border-radius:6px;background:var(--water);color:#fff;
+                font-weight:600;font-size:12px;padding:7px 12px;cursor:pointer}
+  #flood button:hover{background:#21588f}
+  /* view buttons */
+  #views{top:14px;right:14px;display:flex;flex-direction:column;gap:6px;padding:8px}
+  #views button{border:1px solid #d9d9d9;background:#fff;border-radius:6px;font-size:12px;
+                padding:7px 10px;cursor:pointer;font-weight:600;color:#333;text-align:left}
+  #views button:hover{background:#f2f6fb;border-color:var(--water);color:var(--water)}
+  /* legend */
+  #legend{bottom:22px;right:14px;padding:10px 12px;font-size:11.5px;line-height:1.7}
+  #legend .row{display:flex;align-items:center;gap:8px}
+  #legend .sw{width:16px;height:12px;border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.25)}
+  .leaflet-popup-content{font-family:Inter,sans-serif;font-size:12.5px;line-height:1.5}
+  .leaflet-popup-content b{font-size:13.5px}
+  .pop table{border-collapse:collapse;margin:6px 0}
+  .pop td{padding:1px 8px 1px 0;font-variant-numeric:tabular-nums}
+  @media(max-width:600px){#intro{max-width:74vw}#views{padding:6px}#legend{display:none}}
+</style>
+</head>
+<body>
+<div id="map"></div>
+
+<div id="intro" class="panel">
+  <h1>Quabbin: a valley drowned</h1>
+  <p>In 1938 four towns — <b>Dana, Enfield, Greenwich, Prescott</b> — were disincorporated and the Swift River Valley flooded to supply Boston. Drag the slider to raise the water over the towns; the water fills from the valley floor to the 530&nbsp;ft full pool of 1946.</p>
+  <div class="links">
+    <a href="../../quabbin.html">&larr; The full study</a>
+    <a href="https://github.com/mapzimus/maxwellhowegis/tree/main/quabbin" target="_blank" rel="noopener">R code &#8599;</a>
+  </div>
+</div>
+
+<div id="views" class="panel">
+  <button id="vValley">⌖ The valley</button>
+  <button id="vGoes">→ Where the water goes</button>
+</div>
+
+<div id="legend" class="panel">
+  <div class="row"><span class="sw" style="background:#2b6cb0"></span> Reservoir / rising pool</div>
+  <div class="row"><span class="sw" style="background:#2a9d8f;opacity:.4"></span> Watershed (USGS HUC-10)</div>
+  <div class="row"><span class="sw" style="background:#fff;border-color:#1a1a1a"></span> Drowned town</div>
+  <div class="row"><span class="sw" style="background:#1f6fb0"></span> Aqueduct &rarr; Boston</div>
+</div>
+
+<div id="flood" class="panel">
+  <span class="lab">valley floor</span>
+  <input id="slider" type="range" min="1" max="10" value="10" step="1">
+  <span class="lab">full pool</span>
+  <span class="read" id="readout">530 ft · 100% full</span>
+  <button id="play">▶ Play</button>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script>
+const DATA = "data/";
+const map = L.map("map", { zoomControl:true, minZoom:8, maxZoom:15 }).setView([42.32,-72.33], 11);
+
+// --- base layers (keyless) ---
+// labels get their own pane so they sit above the water polygons but below markers
+map.createPane("labels");
+map.getPane("labels").style.zIndex = 450;
+map.getPane("labels").style.pointerEvents = "none";
+
+const relief = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",
+  { attribution:"Hillshade: Esri, USGS", maxZoom:15 });
+const labels = L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
+  { attribution:"Labels: CARTO", pane:"labels" });
+const reliefBase = L.layerGroup([relief, labels]).addTo(map);
+const plain = L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+  { attribution:"&copy; OpenStreetMap, &copy; CARTO" });
+
+const styles = {
+  watershed:{ color:"#13564d", weight:1.5, fillColor:"#2a9d8f", fillOpacity:.14 },
+  reservoirOutline:{ color:"#0b3d66", weight:1, opacity:.5, dashArray:"3 4", fill:false },
+  flood:{ color:"#0b3d66", weight:.6, fillColor:"#2b6cb0", fillOpacity:.85 },
+  aqueduct:{ color:"#1f6fb0", weight:3 }
+};
+
+let floodFeatures=[], floodLayer=L.geoJSON(null,{style:styles.flood}).addTo(map);
+const layers = {};   // toggleable overlays
+
+const fmt = n => n==null ? "—" : n.toLocaleString();
+
+function townPopup(p){
+  return `<div class="pop"><b>${p.town}</b> <span class="muted">${p.county} County</span><br>
+    Chartered <b>${p.incorporated}</b> · disincorporated <b>1938</b>
+    <table>
+      <tr><td class="muted">1900</td><td>${fmt(p.pop1900)}</td></tr>
+      <tr><td class="muted">1910</td><td>${fmt(p.pop1910)}</td></tr>
+      <tr><td class="muted">1920</td><td>${fmt(p.pop1920)}</td></tr>
+    </table>
+    <span class="muted">${p.note||""}</span></div>`;
+}
+
+Promise.all([
+  "towns","reservoir","watershed","floodstages","aqueduct","infrastructure"
+].map(n => fetch(DATA+n+".geojson").then(r=>r.ok?r.json():null).catch(()=>null)))
+.then(([towns,reservoir,watershed,floodstages,aqueduct,infra])=>{
+
+  if(watershed){ layers.Watershed = L.geoJSON(watershed,{style:styles.watershed}); }
+  if(reservoir){ L.geoJSON(reservoir,{style:styles.reservoirOutline}).addTo(map); }
+
+  if(floodstages){
+    floodFeatures = floodstages.features.sort((a,b)=>a.properties.stage-b.properties.stage);
+    setStage(10);
+  }
+
+  if(aqueduct||infra){
+    const grp = L.layerGroup();
+    if(aqueduct) L.geoJSON(aqueduct,{style:styles.aqueduct}).addTo(grp);
+    if(infra) L.geoJSON(infra,{ pointToLayer:(f,ll)=>{
+      const t=f.properties.type;
+      const c = t==="city" ? {r:8,color:"#fff",fill:"#d62828"} :
+                t==="reservoir" ? {r:5,color:"#0b3d66",fill:"#2b6cb0"} :
+                {r:5,color:"#fff",fill:"#444"};
+      return L.circleMarker(ll,{radius:c.r,color:c.color,weight:1.5,fillColor:c.fill,fillOpacity:1})
+              .bindTooltip(f.properties.name,{permanent:t==="city",direction:"top",className:"infra-tip"});
+    }}).addTo(grp);
+    grp.addTo(map);
+    layers["Aqueduct → Boston"]=grp;
+  }
+
+  if(towns){
+    layers["Drowned towns"] = L.geoJSON(towns,{ pointToLayer:(f,ll)=>
+      L.circleMarker(ll,{radius:6,color:"#1a1a1a",weight:1.5,fillColor:"#fff",fillOpacity:1})
+       .bindPopup(townPopup(f.properties))
+       .bindTooltip(f.properties.town,{permanent:true,direction:"top",offset:[0,-6],className:"town-tip"})
+    }).addTo(map);
+  }
+
+  // overlay toggle control
+  L.control.layers(
+    { "Shaded relief":reliefBase, "Plain map":plain },
+    layers, {collapsed:false, position:"bottomleft"}
+  ).addTo(map);
+});
+
+// --- flood slider ---
+function setStage(stage){
+  const f = floodFeatures.find(x=>x.properties.stage===stage);
+  if(!f) return;
+  floodLayer.clearLayers().addData(f);
+  const p=f.properties;
+  document.getElementById("readout").textContent =
+    `${p.pool_ft} ft · ${p.pct}% full` + (stage===10 ? " (1946)" : "");
+}
+const slider=document.getElementById("slider");
+slider.addEventListener("input",e=>setStage(+e.target.value));
+
+let timer=null;
+document.getElementById("play").addEventListener("click",function(){
+  if(timer){ clearInterval(timer); timer=null; this.textContent="▶ Play"; return; }
+  this.textContent="❚❚ Pause";
+  let s = (+slider.value>=10)?1:+slider.value;
+  slider.value=s; setStage(s);
+  timer=setInterval(()=>{
+    s++;
+    if(s>10){ clearInterval(timer); timer=null; document.getElementById("play").textContent="▶ Play"; return; }
+    slider.value=s; setStage(s);
+  },650);
+});
+
+// --- view buttons ---
+document.getElementById("vValley").onclick=()=>map.setView([42.32,-72.33],11,{animate:true});
+document.getElementById("vGoes").onclick=()=>map.fitBounds([[42.18,-72.45],[42.55,-71.00]],{padding:[30,30]});
+</script>
+</body>
+</html>
