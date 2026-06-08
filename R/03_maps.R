@@ -34,7 +34,7 @@ relief_gray <- function() list(
 )
 
 drowned$lab     <- drowned$town
-drowned$lab_end <- paste0(drowned$town, "\n† 1938")
+drowned$lab_end <- paste0(drowned$town, "\n1938")
 
 town_pts  <- geom_sf(data = drowned, shape = 21, fill = "white",
                      colour = INK, size = 2.8, stroke = 0.5)
@@ -64,7 +64,7 @@ p1 <- ggplot() +
   geom_sf(data = aoi_ma, fill = NA, colour = "#d62828", linewidth = 0.7) +
   coord_sf(crs = st_crs(CRS_MA), datum = NA, expand = TRUE) +
   labs(title = "Quabbin Reservoir, Massachusetts",
-       subtitle = "Boston's water supply — and where four towns used to be",
+       subtitle = "Boston's water supply, on the site of four former towns",
        caption = ATTRIB) +
   theme_quabbin()
 save_map(p1, "01_locator.png", w = 9, h = 7)
@@ -74,7 +74,7 @@ p2 <- ggplot() + relief_colored() +
   geom_sf(data = reservoir_ma, fill = NA, colour = WATER_LINE, linewidth = 0.3, linetype = "22") +
   town_pts + deco + coord +
   labs(title = "The Swift River Valley",
-       subtitle = "A long, low north–south basin walled by hills — the terrain that made it a reservoir",
+       subtitle = "A long, low north-south basin, walled by hills, that became the reservoir",
        caption = ATTRIB) +
   theme_quabbin()
 save_map(p2, "02_dem_hillshade.png")
@@ -84,7 +84,7 @@ p3 <- ggplot() + relief_gray() +
   geom_sf(data = reservoir_ma, fill = WATER_FILL, colour = WATER_LINE, linewidth = 0.25, alpha = 0.92) +
   town_pts + town_labs + deco + coord +
   labs(title = "Four towns under the water",
-       subtitle = "Dana, Enfield, Greenwich & Prescott — disincorporated 28 April 1938",
+       subtitle = "Dana, Enfield, Greenwich, and Prescott, disincorporated 28 April 1938",
        caption = paste0("Reservoir extent: ", RES_SRC, "\n", ATTRIB)) +
   theme_quabbin()
 save_map(p3, "03_reservoir_towns.png")
@@ -129,8 +129,8 @@ if (!is.null(towns_aoi)) {
       bg.color = "white", bg.r = 0.2, box.padding = 0.8, point.padding = 8,
       min.segment.length = 0, max.overlaps = Inf, seed = 1) +
     deco + coord +
-    labs(title = "Erased from the map",
-         subtitle = "The four towns (†) are gone — their land divided among the surviving municipalities (italic)",
+    labs(title = "The four towns' land today",
+         subtitle = "The former town land, now divided among the surrounding municipalities",
          caption = ATTRIB) +
     theme_quabbin()
   save_map(p5, "05_erasure.png")
@@ -142,8 +142,8 @@ if (!is.null(towns_aoi)) {
 p_hero <- ggplot() + relief_colored() +
   geom_sf(data = reservoir_ma, fill = WATER_FILL, colour = WATER_LINE, linewidth = 0.3, alpha = 0.9) +
   town_pts + town_labs + deco + coord +
-  labs(title = "Quabbin: a valley chosen, four towns erased",
-       subtitle = "Terrain, water, and the vanished towns of the Swift River Valley, Massachusetts",
+  labs(title = "The Quabbin Reservoir and the Swift River Valley",
+       subtitle = "Terrain, water, and the sites of the four former towns, Massachusetts",
        caption = paste0("Reservoir extent: ", RES_SRC, "\n", ATTRIB)) +
   theme_quabbin(base = 13)
 save_map(p_hero, "08_hero.png", w = 10, h = 10)

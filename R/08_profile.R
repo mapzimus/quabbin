@@ -52,7 +52,7 @@ g <- ggplot(prof, aes(mi, elev_ft)) +
   labs(title = "The drowned valley in cross-section",
        subtitle = "West-east profile across the dendritic reservoir: the 530 ft pool fills each arm of the valley between the hills",
        x = NULL, y = NULL,
-       caption = paste0("Surveyed maximum depth is about 150 ft, near Winsor Dam. Sub-pool relief is DEM-derived (AWS Terrain Tiles) and approximate; vertical scale exaggerated.\n", ATTRIB)) +
+       caption = paste0("Surveyed maximum depth is about 150 ft, near Winsor Dam; the DEM's sub-pool values run deeper and are approximate. Vertical scale exaggerated.\n", ATTRIB)) +
   theme_quabbin() +
   theme(panel.grid.major.y = element_line(colour = "#ededed"))
 

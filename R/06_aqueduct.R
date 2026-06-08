@@ -1,9 +1,8 @@
 # 06_aqueduct.R -----------------------------------------------------------
-# The ethics, made spatial: the water doesn't stay. It leaves the drowned
-# valley through Winsor Dam / Goodnough Dike and runs ~100 km east by
-# aqueduct (Quabbin -> Wachusett -> Boston) to the metropolis it was taken
-# for. Renders output/10_aqueduct.png and exports the infrastructure as
-# GeoJSON for the web map.
+# Where the water goes: it leaves the valley through Winsor Dam / Goodnough
+# Dike and runs ~105 km east by aqueduct (Quabbin -> Wachusett -> Boston) to
+# metropolitan Boston. Renders output/10_aqueduct.png and exports the
+# infrastructure as GeoJSON for the web map.
 # Geometry is hand-placed from known coordinates (schematic, not surveyed).
 # -------------------------------------------------------------------------
 
@@ -54,14 +53,14 @@ p_aq <- ggplot() +
   annotate("text", x = route_df$x[1] * 0.6 + route_df$x[2] * 0.4, y = mean(route_df$y[1:2]) - 15000,
            label = "Quabbin Aqueduct", size = 3, colour = "#1f6fb0", fontface = "italic") +
   annotate("label", x = mean(c(route_df$x[1], route_df$x[3])), y = min(route_df$y) - 26000,
-           label = sprintf("~%d km (%d mi) east — to the city the valley was drowned for",
+           label = sprintf("~%d km (%d mi) east to metropolitan Boston",
                            round(d_km), round(d_km / 1.609)),
            size = 3.1, colour = INK, fill = "white", alpha = 0.7, label.size = 0) +
   ggspatial::annotation_scale(location = "bl", height = unit(0.12, "cm"), text_cex = 0.55, line_width = 0.4) +
   coord_sf(crs = st_crs(CRS_MA), datum = NA, expand = TRUE) +
-  labs(title = "Drowned for a city 100 km away",
+  labs(title = sprintf("Where the water goes: ~%d km east to Boston", round(d_km)),
        subtitle = "The water leaves the Swift River Valley through Winsor Dam and runs east by aqueduct to metropolitan Boston",
-       caption = paste0("Aqueduct route is schematic (Quabbin → Wachusett → Boston). Dams: Winsor Dam & Goodnough Dike.\n", ATTRIB)) +
+       caption = paste0("Aqueduct route is schematic (Quabbin to Wachusett to Boston). Dams: Winsor Dam and Goodnough Dike.\n", ATTRIB)) +
   theme_quabbin()
 save_map(p_aq, "10_aqueduct.png", w = 11, h = 7)
 

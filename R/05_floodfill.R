@@ -1,5 +1,5 @@
 # 05_floodfill.R ----------------------------------------------------------
-# Animate the valley drowning. Raise the pool level up the DEM in stages,
+# Animate the reservoir filling. Raise the pool level up the DEM in stages,
 # carve the water at each level, and render:
 #   - output/floodfill_frames/f_##.png  (frames)
 #   - output/quabbin_floodfill.gif      (animation, via ImageMagick)
@@ -72,7 +72,7 @@ frame_plot <- function(water, level) {
             fill = WATER_FILL, colour = WATER_LINE, linewidth = 0.2, alpha = 0.95) +
     geom_sf(data = drowned, shape = 21, fill = "white", colour = INK, size = 1.9, stroke = 0.4) +
     coordf +
-    labs(title = sprintf("Filling the Quabbin — pool at %d ft", round(level / 0.3048)),
+    labs(title = sprintf("Filling the reservoir, pool at %d ft", round(level / 0.3048)),
          subtitle = sprintf("%d%% of full surface%s", pct, if (full) " (full pool, 1946)" else ""),
          caption = "Water = land below the rising pool, carved from the DEM. Full pool = 530 ft ASL.") +
     theme_quabbin()
@@ -100,7 +100,7 @@ panel <- patchwork::wrap_plots(
                  plot.title = element_text(size = rel(0.95)))),
   ncol = 3) +
   patchwork::plot_annotation(
-    title = "The valley drowning, stage by stage (1939–1946)",
+    title = "Filling the reservoir, stage by stage (1939-1946)",
     caption = "Each panel raises the pool another step toward the 530 ft full pool. Carved from the DEM.")
 save_map(panel, "09_floodfill.png", w = 12, h = 8)
 

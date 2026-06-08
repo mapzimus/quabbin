@@ -33,7 +33,7 @@ p_losses <- ggplot(stats) +
        x = NULL, y = NULL,
        caption = paste0(
          "Compiled from MWRA, Massachusetts DCR, and regional histories; figures vary by source ",
-         "(displaced residents reported as 2,000–2,500; graves relocated as ~6,600–7,600). ",
+         "(displaced residents reported as 2,000-2,500; graves relocated as ~6,600-7,600). ",
          "Dam sealed 1939; full pool reached 1946.")) +
   theme_quabbin() +
   theme(axis.text = element_blank(), axis.ticks = element_blank(),

@@ -4,7 +4,7 @@ A reproducible **R** GIS study of the Quabbin Reservoir, Massachusetts, created
 between 1938 and 1946 by damming and flooding the Swift River Valley. Four towns
 — **Dana, Enfield, Greenwich, and Prescott** — were disincorporated on 28 April
 1938 and about 2,500 residents were relocated; the reservoir supplies
-metropolitan Boston, roughly 100 km (65 miles) to the east.
+metropolitan Boston, roughly 105 km (65 miles) to the east.
 
 It is a *multi-layer study*: several spatial layers that, read together, describe
 how the reservoir was sited and what it replaced — a valley whose terrain forms a
@@ -26,7 +26,7 @@ present-day map in which their land has been absorbed by the surrounding towns.
 | 7 | `07_population_decline.png` | Decennial census population, 1900–1920 | US Census 1920 (Number of Inhabitants) |
 | 8 | `08_hero.png` | Terrain, reservoir, and the former town sites together | all of the above |
 | 9 | `09_floodfill.png` | The reservoir filling in stages to the 530-ft full pool | DEM |
-| 10 | `10_aqueduct.png` | The aqueduct route, ~100 km east to Boston | hand-placed coordinates |
+| 10 | `10_aqueduct.png` | The aqueduct route, ~105 km east to Boston | hand-placed coordinates |
 | 11 | `11_crosssection.png` | West-east valley cross-section at the 530-ft pool | DEM |
 | 12 | `12_losses.png` | "By the numbers": what was removed and what is supplied | MWRA / DCR / histories |
 | 13 | `13_terrain3d.png` | 3D view of the valley and reservoir | DEM (`persp`) |
@@ -131,7 +131,7 @@ never breaks the run — it degrades to a documented fallback instead.
   window, 1939–1946, is annotated).
 - **Aqueduct & dams** — the route (Quabbin → Wachusett → Boston) and the dams
   (Winsor Dam, Goodnough Dike) are **hand-placed from known coordinates** and
-  labeled schematic; they convey the ~100 km eastward course of the water, not a
+  labeled schematic; they convey the ~105 km eastward course of the water, not a
   surveyed alignment.
 - **Cross-section** (`08_profile.R`) — a west-east transect of the DEM at the
   reservoir's widest point. The DEM retains sub-pool relief of the drowned valley,
