@@ -27,18 +27,40 @@ terra::writeRaster(hill,   file.path(DIR_CACHE, "hillshade_ma.tif"), overwrite =
 msg("DEM reprojected to EPSG:%d and hillshaded (%d x %d cells)", CRS_MA, nrow(dem_ma), ncol(dem_ma))
 
 # --- Reservoir ------------------------------------------------------------
-if (is.null(reservoir)) {
-  # Fallback: everything at/below the 530 ft full-pool surface inside the AOI.
-  wmask <- dem_ma <= POOL_M
-  wmask <- terra::ifel(wmask == 1, 1, NA)
-  rp    <- sf::st_as_sf(terra::as.polygons(wmask, dissolve = TRUE))
-  rp    <- st_make_valid(suppressWarnings(st_cast(rp, "POLYGON")))
-  rp$area <- as.numeric(st_area(rp))
-  reservoir_ma <- rp[which.max(rp$area), ]
+# The coarse regional DEM (elevatr) can't resolve Winsor Dam / Goodnough Dike, so
+# a naive "largest area below the 530 ft pool" leaks south past the dams into the
+# dry lowlands around Belchertown & Ware. Derive the real footprint from MassGIS
+# 1 m LiDAR (downsampled to 10 m here), which DOES resolve the dams: the largest
+# contiguous body at/below the pool is the basin, cleanly cut off from downstream.
+MG_DEM <- "https://arcgisserver.digital.mass.gov/arcgisserver/rest/services/LiDAR/DEM_lidar_2013to2021_32bitFloat/ImageServer/exportImage"
+reservoir_true <- tryCatch({
+  bb <- c(-72.400, 42.285, -72.275, 42.465); mpp <- 10
+  dst <- file.path(DIR_CACHE, "massgis_reservoir10m.tif")
+  if (!file.exists(dst) || file.size(dst) < 1e5) {
+    latm <- mean(c(bb[2], bb[4]))
+    w <- round((bb[3] - bb[1]) * cos(latm * pi / 180) * 111320 / mpp); h <- round((bb[4] - bb[2]) * 111320 / mpp)
+    url <- sprintf("%s?bbox=%f,%f,%f,%f&bboxSR=4326&size=%d,%d&imageSR=%d&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image",
+                   MG_DEM, bb[1], bb[2], bb[3], bb[4], w, h, CRS_MA)
+    ok <- FALSE; for (k in 1:5) { ok <- tryCatch({ download.file(url, dst, mode = "wb", quiet = TRUE); file.exists(dst) && file.size(dst) > 1e5 }, error = function(e) FALSE); if (ok) break; Sys.sleep(2 * k) }
+    if (!ok) stop("MassGIS DEM unavailable")
+  }
+  d10 <- terra::rast(dst)[[1]]
+  pat <- terra::patches(terra::ifel(d10 <= POOL_M, 1, NA), directions = 8, zeroAsNA = TRUE)
+  fr  <- terra::freq(pat); big <- fr$value[which.max(fr$count)]
+  pp  <- sf::st_as_sf(terra::as.polygons(terra::ifel(pat == big, 1, NA), dissolve = TRUE))
+  st_simplify(st_make_valid(st_union(st_geometry(pp))), dTolerance = 15)
+}, error = function(e) { msg("  reservoir: MassGIS unavailable (%s); using coarse-DEM carve", conditionMessage(e)); NULL })
+
+if (!is.null(reservoir_true)) {
+  reservoir_ma <- st_sf(name = "Quabbin Reservoir", geometry = st_sfc(reservoir_true, crs = CRS_MA))
+  RES_SRC <- "MassGIS LiDAR (dam-contained, <= 530 ft pool)"
+} else if (is.null(reservoir)) {
+  wmask <- terra::ifel((dem_ma <= POOL_M) == 1, 1, NA)
+  rp    <- st_make_valid(suppressWarnings(st_cast(sf::st_as_sf(terra::as.polygons(wmask, dissolve = TRUE)), "POLYGON")))
+  rp$area <- as.numeric(st_area(rp)); reservoir_ma <- rp[which.max(rp$area), ]
   RES_SRC <- sprintf("DEM-derived (<= %d ft full pool)", POOL_FT)
 } else {
-  reservoir_ma <- st_make_valid(st_transform(reservoir, CRS_MA))
-  RES_SRC <- "OpenStreetMap (natural=water)"
+  reservoir_ma <- st_make_valid(st_transform(reservoir, CRS_MA)); RES_SRC <- "OpenStreetMap (natural=water)"
 }
 # Clip to AOI and dissolve to a single waterbody.
 reservoir_ma <- st_intersection(st_union(st_geometry(reservoir_ma)), st_geometry(aoi_ma))

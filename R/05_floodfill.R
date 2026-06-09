@@ -29,10 +29,10 @@ carve <- function(level) {
   st_intersection(st_union(st_geometry(p)), st_geometry(aoi_ma))
 }
 
-# The full-pool footprint, carved once. Every stage then fills WITHIN this fixed
-# footprint, so the animation is strictly monotonic (no flicker from a per-stage
-# "largest blob" flipping between components).
-reservoir_full <- st_make_valid(carve(POOL_M))
+# The full-pool footprint = the true, dam-contained reservoir from 02 (MassGIS
+# LiDAR). Every stage fills WITHIN this fixed footprint, so the animation is
+# strictly monotonic AND never leaks past the dams into Belchertown / Ware.
+reservoir_full <- st_make_valid(st_union(st_geometry(reservoir_ma)))
 area_full      <- as.numeric(st_area(reservoir_full))
 .fpv           <- terra::vect(st_sf(geometry = reservoir_full))
 dem_res        <- terra::mask(dem_ma, .fpv)
