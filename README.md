@@ -25,7 +25,7 @@ present-day map in which their land has been absorbed by the surrounding towns.
 | 6 | `06_town_lifelines.png` | Each town's span, charter to the 1938 disincorporation | town records |
 | 7 | `07_population_decline.png` | Decennial census population, 1900–1920 | US Census 1920 (Number of Inhabitants) |
 | 8 | `08_hero.png` | Terrain, reservoir, and the former town sites together | all of the above |
-| 9 | `09_floodfill.png` | The reservoir filling in stages to the 530-ft full pool | DEM |
+| 9 | `09_floodfill.png` | The reservoir filling in equal-area stages to the 530-ft full pool (schematic synthetic basin) | DEM + modeled depth |
 | 10 | `10_aqueduct.png` | The aqueduct route, ~105 km east to Boston | hand-placed coordinates |
 | 11 | `11_crosssection.png` | West-east valley cross-section at the 530-ft pool | DEM |
 | 12 | `12_losses.png` | "By the numbers": what was removed and what is supplied | MWRA / DCR / histories |
@@ -38,7 +38,7 @@ present-day map in which their land has been absorbed by the surrounding towns.
 | 19 | `24_dana_survey.png` | Dana Common: the surviving common/ridge vs. the drowned village | MassGIS 1 m LiDAR + 1893 quad |
 | 20 | `25_prescott_xref.png` | Ground-truth: the 1893 road network extracted and cross-referenced against the LiDAR traces | MassGIS LiDAR + 1893 quad |
 
-Plus a **reservoir-filling animation** (`quabbin_floodfill.gif`) and an
+Plus a schematic **reservoir-filling animation** (`quabbin_floodfill.gif`) and an
 **interactive LiDAR imprint explorer** in [`map/`](map/) (mobile-first Leaflet):
 a **"ghost relief"** layer covering the *whole* reservoir in bare-earth LiDAR —
 pan and zoom across every acre the reservoir spared to hunt the relict **streets,
@@ -91,7 +91,7 @@ quabbin/
 │   ├── 02_build_layers.R  reproject, hillshade, carve the reservoir, assemble layers
 │   ├── 03_maps.R          the six spatial figures (shaded relief + vector overlays)
 │   ├── 04_population.R    the two displacement charts (real census + lifelines)
-│   ├── 05_floodfill.R     reservoir-filling frames + GIF + small-multiples + stage GeoJSON
+│   ├── 05_floodfill.R     schematic reservoir-filling frames + GIF + panel + stage GeoJSON
 │   ├── 06_aqueduct.R      the aqueduct-to-Boston map + infrastructure GeoJSON
 │   ├── 07_export_web.R    export towns/reservoir/watershed GeoJSON for the web map
 │   ├── 08_profile.R       west-east valley cross-section
@@ -119,12 +119,15 @@ never breaks the run — it degrades to a documented fallback instead.
 - **Elevation** — AWS Terrain Tiles (SRTM/USGS, public domain) via
   `elevatr::get_elev_raster(z = 11)`, reprojected to NAD83 / Massachusetts
   Mainland (EPSG:26986) and hillshaded with `terra`.
-- **Reservoir** — by default **carved from the DEM** at Quabbin's 530-ft
-  full-pool surface (the single largest contiguous polygon below that
-  elevation). This needs no external service and ties the water directly to the
-  terrain. An OpenStreetMap shoreline path (`RESERVOIR_METHOD <- "osm"`) is
-  available but opt-in, because public Overpass servers frequently rate-limit
-  or block cloud IPs.
+- **Reservoir** — derived from **MassGIS 1 m LiDAR** (downsampled to 10 m): the
+  largest contiguous area at/below the 530-ft full pool. Unlike the coarse
+  regional DEM, the LiDAR **resolves Winsor Dam and Goodnough Dike**, so the basin
+  is correctly cut off from the downstream lowlands — the water no longer spills
+  south past the dams onto Belchertown/Ware streets (an earlier coarse-DEM
+  artifact). If MassGIS is unreachable it falls back to the coarse-DEM carve
+  (largest polygon below the pool), and an OpenStreetMap shoreline path
+  (`RESERVOIR_METHOD <- "osm"`) is also available but opt-in (Overpass rate-limits
+  cloud IPs).
 - **Watershed** — USGS Watershed Boundary Dataset HUC-10 units (public domain),
   queried live from the National Map ArcGIS service. **These are deliberately
   shown as regional context, not as the catchment boundary:** the dissolved
@@ -143,13 +146,17 @@ never breaks the run — it degrades to a documented fallback instead.
   reservoir. Earlier peaks (Enfield ~1,100 in 1850, Prescott ~750 in 1830) and
   the 1938 dissolution (~2,500 displaced in all) are shown as annotated context,
   not plotted as census points. All four disincorporated **28 April 1938**.
-- **Reservoir-filling animation** — `05_floodfill.R` carves the full-pool
-  footprint once, then fills it in **equal-area stages** on a lightly smoothed DEM
-  (the broad, shallow basin would otherwise flood most of its area in the final
-  elevation step). Frames become a GIF (ImageMagick) and a small-multiples panel,
-  and the per-stage polygons are exported as GeoJSON for the map slider. Stages
-  are by pool level / area, not surveyed year-by-year fill data (the real fill
-  window, 1939–1946, is annotated).
+- **Reservoir-filling animation** — `05_floodfill.R`, explicitly **schematic**.
+  Modern DEMs (AWS Terrain and LiDAR alike) capture only today's water surface
+  (~530 ft), **not the drowned valley floor**, so a true elevation-based fill is
+  impossible. Instead the basin is modeled synthetically: depth grows with
+  distance from the shoreline (the broad main basin deepest, the narrow arms
+  shallow), scaled to the reservoir's surveyed **~150 ft maximum depth**; the pool
+  then rises over that synthetic bed in **equal-area stages**, filling the deep
+  central channel first and spreading to the arms (≈7 % → 100 %). Frames become a
+  GIF (ImageMagick), a small-multiples panel, and per-stage GeoJSON for the map
+  slider. It is a schematic of *how* the basin filled (1939–1946), **not surveyed
+  bathymetry** — captioned as such.
 - **Aqueduct & dams** — the route (Quabbin → Wachusett → Boston) and the dams
   (Winsor Dam, Goodnough Dike) are **hand-placed from known coordinates** and
   labeled schematic; they convey the ~105 km eastward course of the water, not a

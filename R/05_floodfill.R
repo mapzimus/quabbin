@@ -20,42 +20,31 @@ bb     <- st_bbox(aoi_ma)
 coordf <- coord_sf(crs = st_crs(CRS_MA), xlim = c(bb["xmin"], bb["xmax"]),
                    ylim = c(bb["ymin"], bb["ymax"]), expand = FALSE, datum = NA)
 
-# Carve the main reservoir body at a pool elevation (metres): land <= level,
-# largest contiguous component, clipped to the study window.
-carve <- function(level) {
-  m <- terra::ifel(dem_ma <= level, 1, NA)
-  p <- suppressWarnings(st_cast(st_make_valid(sf::st_as_sf(terra::as.polygons(m, dissolve = TRUE))), "POLYGON"))
-  p <- p[which.max(as.numeric(st_area(p))), ]
-  st_intersection(st_union(st_geometry(p)), st_geometry(aoi_ma))
-}
-
-# The full-pool footprint = the true, dam-contained reservoir from 02 (MassGIS
-# LiDAR). Every stage fills WITHIN this fixed footprint, so the animation is
-# strictly monotonic AND never leaks past the dams into Belchertown / Ware.
+# Modern DEMs (AWS Terrain and LiDAR alike) capture only today's WATER SURFACE
+# (~530 ft), not the drowned valley floor, so a true elevation fill is impossible.
+# Model the basin SCHEMATICALLY: synthetic depth grows with distance from shore
+# (broad main basin deepest, narrow arms shallow), scaled to the reservoir's
+# surveyed ~150 ft maximum depth. The pool then rises over this synthetic bed,
+# filling the deep central channel first and spreading out to the arms.
 reservoir_full <- st_make_valid(st_union(st_geometry(reservoir_ma)))
 area_full      <- as.numeric(st_area(reservoir_full))
 .fpv           <- terra::vect(st_sf(geometry = reservoir_full))
-dem_res        <- terra::mask(dem_ma, .fpv)
-# De-quantise the integer-metre DEM: the valley floor has broad benches at whole
-# metres (e.g. ~40% of the footprint at 157 m & 159 m), which would collapse the
-# area-quantiles onto a couple of levels. Light smoothing recovers the gentle
-# underlying slope so the surface fills gradually instead of in two big steps.
-dem_res        <- terra::mask(terra::focal(dem_res, w = 15, fun = mean, na.rm = TRUE), .fpv)
+.grid   <- terra::crop(dem_ma, terra::ext(.fpv), snap = "out")
+.inside <- terra::rasterize(.fpv, .grid, field = 1, background = NA)
+dshore  <- terra::mask(terra::distance(terra::ifel(is.na(.inside), 1, NA)), .fpv)  # metres to shore, inside only
+bed     <- POOL_M - (dshore / as.numeric(terra::global(dshore, "max", na.rm = TRUE))) * (150 * 0.3048)
 
-# Step by EQUAL AREA, not equal elevation: each frame floods about the same extra
-# surface. Quabbin is a broad, shallow basin, so equal-elevation steps dump most
-# of the area into the final frame (the old 33% -> 100% jump). Area quantiles of
-# the footprint's hypsometry spread the fill evenly instead.
-N      <- 16
-vals   <- terra::values(dem_res); vals <- vals[!is.na(vals) & vals <= POOL_M]
-levels <- as.numeric(quantile(vals, probs = seq(1 / N, 1, length.out = N)))
-levels <- sort(unique(round(levels, 1)))      # drop levels that collapse onto the same bench
+# EQUAL-AREA stages: quantiles of the synthetic bed -> each frame floods about the
+# same extra surface, rising from a small central channel up to the full footprint.
+N      <- 14
+bvals  <- terra::values(bed); bvals <- bvals[!is.na(bvals)]
+levels <- as.numeric(quantile(bvals, probs = seq(1 / N, 1, length.out = N)))
 levels[length(levels)] <- POOL_M
-msg("flood stages (%d, m): %s", length(levels), paste(round(levels, 1), collapse = ", "))
+msg("schematic flood stages (%d, ft): %s", length(levels), paste(round(levels / 0.3048), collapse = ", "))
 
-# Water inside the footprint at a given level (subset of the next level by design).
+# Water inside the footprint at a given fill level (subset of the next by design).
 carve_fill <- function(level) {
-  m <- terra::ifel(dem_res <= level, 1, NA)
+  m <- terra::ifel(bed <= level, 1, NA)
   if (all(is.na(terra::values(m)))) return(reservoir_full)
   st_make_valid(st_union(sf::st_as_sf(terra::as.polygons(m, dissolve = TRUE))))
 }
@@ -74,7 +63,7 @@ frame_plot <- function(water, level) {
     coordf +
     labs(title = sprintf("Filling the reservoir, pool at %d ft", round(level / 0.3048)),
          subtitle = sprintf("%d%% of full surface%s", pct, if (full) " (full pool, 1946)" else ""),
-         caption = "Water = land below the rising pool, carved from the DEM. Full pool = 530 ft ASL.") +
+         caption = "Schematic fill: the drowned valley floor isn't in modern DEMs, so depth is modeled from distance-to-shore (surveyed max ~150 ft). Full pool = 530 ft.") +
     theme_quabbin()
 }
 
@@ -101,7 +90,7 @@ panel <- patchwork::wrap_plots(
   ncol = 3) +
   patchwork::plot_annotation(
     title = "Filling the reservoir, stage by stage (1939-1946)",
-    caption = "Each panel raises the pool another step toward the 530 ft full pool. Carved from the DEM.")
+    caption = "Each panel raises the pool another step toward the 530 ft full pool. Schematic synthetic bathymetry (the drowned valley floor isn't captured by modern DEMs).")
 save_map(panel, "09_floodfill.png", w = 12, h = 8)
 
 # --- Export per-stage polygons for the web slider -------------------------
