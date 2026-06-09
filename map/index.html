@@ -116,9 +116,9 @@
   </div>
   <div class="grp">
     <h2>LiDAR imprints</h2>
-    <label class="row"><input type="checkbox" id="lRelief"><span class="sw" style="background:#9a9a9a"></span><span class="lab">Relief (1 m LiDAR)</span></label>
+    <label class="row"><input type="checkbox" id="lRelief"><span class="sw" style="background:#9a9a9a"></span><span class="lab">Ghost relief (whole reservoir)</span></label>
     <label class="row"><input type="checkbox" id="lTrace"><span class="sw" style="background:linear-gradient(90deg,var(--road) 50%,var(--wall) 50%)"></span><span class="lab">Traced lines</span></label>
-    <div class="hint">Roads/paths in <b style="color:var(--road)">orange</b>, walls/banks in <b style="color:var(--wall)">teal</b> — auto-detected candidates.</div>
+    <div class="hint">Turn on Ghost relief and zoom in: the grey is bare-earth LiDAR — hunt the old streets, house-lot outlines and cellar holes. Traced lines are auto-detected road/wall candidates.</div>
     <div class="jump" id="jump"></div>
   </div>
   <div class="grp">
@@ -198,17 +198,27 @@ fetch(DATA+"preflood.json").then(r=>r.ok?r.json():null).then(meta=>{ if(!meta) r
   op.addEventListener("input",()=>histOv.setOpacity(+op.value/100));
 }).catch(()=>{});
 
-// ---- LiDAR imprint overlays + jump-to buttons ----
-fetch(DATA+"imprints.json").then(r=>r.ok?r.json():null).then(list=>{
-  if(!list) return; const jump=document.getElementById("jump");
-  list.forEach(s=>{
-    reliefGroup.addLayer(L.imageOverlay(DATA+"imprint_"+s.slug+".png", s.bounds,{opacity:0.95,pane:"lidar"}));
-    traceGroup .addLayer(L.imageOverlay(DATA+"imprint_"+s.slug+"_trace.png", s.bounds,{opacity:0.95,pane:"trace"}));
-    const b=document.createElement("button"); b.textContent="◎ "+s.label.replace(/\s*\(.*\)/,"");
-    b.onclick=()=>{ setChk("lRelief",true); map.fitBounds(s.bounds,{padding:[24,24]}); closeSheetMobile(); };
-    jump.appendChild(b);
-  });
+// ---- Ghost relief: full-reservoir LiDAR coverage (2 m tiles + 1 m village sites) ----
+fetch(DATA+"reservoir_ghost.json").then(r=>r.ok?r.json():null).then(list=>{
+  if(!list) return;
+  list.forEach(s=> reliefGroup.addLayer(L.imageOverlay(DATA+"imprintg_"+s.slug+".png", s.bounds, {opacity:0.96, pane:"lidar"})));
 }).catch(()=>{});
+// ---- Traced lines (auto-detected road/wall candidates) from the per-town survey ----
+fetch(DATA+"imprints.json").then(r=>r.ok?r.json():null).then(list=>{
+  if(!list) return;
+  list.forEach(s=> traceGroup.addLayer(L.imageOverlay(DATA+"imprint_"+s.slug+"_trace.png", s.bounds, {opacity:0.95, pane:"trace"})));
+}).catch(()=>{});
+// ---- jump-to buttons: the whole reservoir + the surviving village sites ----
+const JUMPS = [
+  {label:"Whole reservoir", bounds:[[42.272,-72.398],[42.458,-72.282]]},
+  {label:"Prescott Center", bounds:[[42.3865,-72.3515],[42.3965,-72.3385]]},
+  {label:"Dana Common",     bounds:[[42.4272,-72.2895],[42.4358,-72.2775]]}
+];
+(function(){ const jump=document.getElementById("jump");
+  JUMPS.forEach(s=>{ const b=document.createElement("button"); b.textContent="◎ "+s.label;
+    b.onclick=()=>{ setChk("lRelief",true); map.fitBounds(s.bounds,{padding:[20,20]}); closeSheetMobile(); };
+    jump.appendChild(b); });
+})();
 
 // ---- flood slider ----
 function setStage(stage){ const f=floodFeatures.find(x=>x.properties.stage===stage); if(!f) return;

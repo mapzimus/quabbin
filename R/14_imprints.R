@@ -106,7 +106,9 @@ write_overlay <- function(R, G, B, A, slug, maxdim) {
 AREAS <- list(
   list(slug = "dana",      bbox = c(-72.2925, 42.4262, -72.2765, 42.4368), label = "Dana Common",        web = TRUE),
   list(slug = "enfield",   bbox = c(-72.346, 42.305, -72.324, 42.322),    label = "Enfield (Winsor Dam)", web = TRUE),
-  list(slug = "greenwich", bbox = c(-72.307, 42.351, -72.287, 42.368),    label = "Greenwich (village site, now submerged)", web = FALSE),
+  # (Greenwich's center is entirely under water — no footprint survives, so it gets no
+  #  imprint figure; its drowned site is shown by the reservoir/flood/roads maps and is
+  #  covered, transparent-over-water, by the full-reservoir ghost layer in 16_reservoir.R.)
   # The Prescott Peninsula runs ~12 km N-S; a single export exceeds the server's
   # ~4 Mpx cap, so mosaic three ~2 m strips into one DEM for full coverage.
   list(slug = "prescott",  bbox = c(-72.362, 42.350, -72.318, 42.458),    label = "Prescott Peninsula",  web = TRUE, tiled = TRUE, nstrips = 3, mpp = 2)
@@ -146,17 +148,17 @@ for (a in AREAS) {
   stitch_row(pngs, fig, pw, ph, sprintf("%s - what survives in the ground", a$label))
 
   # ---- web overlays ----
+  # the explorer's relief comes from the full-reservoir ghost layer (16_reservoir.R);
+  # here we export only the auto-trace overlay (the optional "Traced lines" layer).
   if (isTRUE(a$web)) {
-    md <- if (isTRUE(a$tiled)) 6100 else 1400   # peninsula at full ~2 m so it stays crisp when zoomed in
-    A <- terra::ifel(water | is.na(demS), 0, 235)
-    bounds <- write_overlay(base, base, base, A, paste0("imprint_", a$slug), md)
+    md <- if (isTRUE(a$tiled)) 6100 else 1400
     hasline <- (!is.na(roads)) | (!is.na(walls))
     oR <- terra::ifel(!is.na(walls), wl[1], 0); oG <- terra::ifel(!is.na(walls), wl[2], 0); oB <- terra::ifel(!is.na(walls), wl[3], 0)
     oR <- terra::ifel(!is.na(roads), rc[1], oR); oG <- terra::ifel(!is.na(roads), rc[2], oG); oB <- terra::ifel(!is.na(roads), rc[3], oB)
-    write_overlay(oR, oG, oB, terra::ifel(hasline, 255, 0), paste0("imprint_", a$slug, "_trace"), md)
+    bounds <- write_overlay(oR, oG, oB, terra::ifel(hasline, 255, 0), paste0("imprint_", a$slug, "_trace"), md)
     writeLines(sprintf('  {"slug":"%s","label":"%s","bounds":[[%.6f,%.6f],[%.6f,%.6f]]}',
                        a$slug, a$label, bounds[1], bounds[2], bounds[3], bounds[4]), file.path(DIR_WEB, paste0(".bounds_", a$slug)))
-    msg("imprints: %s done (relief + trace overlays, survey figure)", a$slug)
+    msg("imprints: %s done (trace overlay + survey figure)", a$slug)
   } else msg("imprints: %s done (static survey figure only)", a$slug)
 }
 
