@@ -1,0 +1,5 @@
+[
+  {"slug":"prescott","label":"Prescott Peninsula (north)","bounds":[[42.425351,-72.336158],[42.437629,-72.319845]]},
+  {"slug":"dana","label":"Dana Common","bounds":[[42.426070,-72.292632],[42.436907,-72.276365]]},
+  {"slug":"enfield","label":"Enfield (Winsor Dam)","bounds":[[42.304757,-72.346227],[42.322211,-72.323768]]}
+]

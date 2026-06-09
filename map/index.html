@@ -2,250 +2,259 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quabbin — Interactive Map | Maxwell Howe GIS</title>
-<meta name="description" content="Interactive map of the Quabbin Reservoir: raise the pool in stages over the four former towns of the Swift River Valley, compare the 1893 pre-reservoir map, and follow the aqueduct east to Boston.">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quabbin — LiDAR Imprint Explorer | Maxwell Howe GIS</title>
+<meta name="description" content="Explore the Quabbin Reservoir's four lost towns in 1 m LiDAR: hunt the relict roads, paths and field walls still imprinted in the ground on the land that never went under, compare the 1893 survey, and raise the pool over the valley.">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --ink:#1a1a1a; --water:#2b6cb0; --line:#0b3d66; --red:#7a1f1f; }
+  :root{ --ink:#1a1a1a; --water:#2b6cb0; --line:#0b3d66; --road:#ff7b00; --wall:#1fb6a6;
+         --bg:rgba(255,255,255,.96); --br:#dcdcdc; --tap:44px; }
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;font-family:Inter,system-ui,sans-serif;color:var(--ink)}
+  html,body{margin:0;height:100%;font-family:Inter,system-ui,sans-serif;color:var(--ink);-webkit-text-size-adjust:100%}
   #map{position:absolute;inset:0;background:#dfe3e6}
-  .panel{position:absolute;z-index:1000;background:rgba(255,255,255,.94);
-         border:1px solid #d9d9d9;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,.12)}
-  /* intro */
-  #intro{top:14px;left:14px;max-width:330px;padding:16px 18px}
-  #intro h1{margin:0 0 6px;font-size:18px;letter-spacing:-.01em}
-  #intro p{margin:0 0 8px;font-size:12.5px;line-height:1.5;color:#444}
-  #intro .links{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
-  #intro a{font-size:12px;color:var(--water);text-decoration:none;font-weight:600}
-  #intro a:hover{text-decoration:underline}
-  .muted{color:#888}
-  /* flood control */
-  #flood{bottom:22px;left:50%;transform:translateX(-50%);
-         padding:12px 18px;display:flex;align-items:center;gap:14px;min-width:min(560px,92vw)}
-  #flood .lab{font-size:12px;color:#555;white-space:nowrap}
-  #flood .read{font-weight:700;font-size:13px;color:var(--line);white-space:nowrap;min-width:140px}
-  #flood input[type=range]{flex:1;accent-color:var(--water)}
-  #flood button{border:0;border-radius:6px;background:var(--water);color:#fff;
-                font-weight:600;font-size:12px;padding:7px 12px;cursor:pointer}
+  button{font-family:inherit}
+  .card{background:var(--bg);border:1px solid var(--br);border-radius:12px;box-shadow:0 6px 22px rgba(0,0,0,.14)}
+
+  /* top bar */
+  #bar{position:absolute;z-index:1000;top:10px;left:10px;right:10px;display:flex;gap:8px;align-items:center;pointer-events:none}
+  #bar > *{pointer-events:auto}
+  #title{padding:8px 12px;font-weight:700;font-size:14px;letter-spacing:-.01em;white-space:nowrap}
+  #title small{display:block;font-weight:500;font-size:10.5px;color:#777;letter-spacing:.02em}
+  #bar .spacer{flex:1}
+  .iconbtn{height:var(--tap);min-width:var(--tap);padding:0 14px;border:1px solid var(--br);border-radius:12px;background:var(--bg);
+           font-weight:600;font-size:13px;color:#333;cursor:pointer;display:flex;align-items:center;gap:7px}
+  .iconbtn:hover{border-color:var(--water);color:var(--water)}
+  .iconbtn.on{background:var(--water);color:#fff;border-color:var(--water)}
+
+  /* about sheet */
+  #about{position:absolute;z-index:1001;top:64px;left:10px;max-width:340px;padding:15px 17px;display:none}
+  #about.show{display:block}
+  #about h1{margin:0 0 7px;font-size:16px}
+  #about p{margin:0 0 9px;font-size:12.5px;line-height:1.55;color:#444}
+  #about .links{display:flex;gap:14px;flex-wrap:wrap}
+  #about a{font-size:12px;color:var(--water);text-decoration:none;font-weight:600}
+  #about a:hover{text-decoration:underline}
+
+  /* controls panel */
+  #panel{position:absolute;z-index:1001;top:64px;right:10px;width:268px;max-height:calc(100% - 150px);
+         overflow:auto;padding:6px;display:none}
+  #panel.show{display:block}
+  .grp{padding:8px 8px 4px}
+  .grp h2{margin:0 0 6px;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#8a8a8a}
+  .row{display:flex;align-items:center;gap:9px;min-height:38px;padding:2px 4px;border-radius:8px;cursor:pointer;font-size:13px}
+  .row:hover{background:#f3f6fb}
+  .row input{width:18px;height:18px;accent-color:var(--water);flex:none}
+  .row .sw{width:16px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25);flex:none}
+  .row .lab{flex:1}
+  .sub{padding:2px 4px 8px 31px}
+  .sub input[type=range]{width:100%;accent-color:#8a5a2b}
+  .jump{display:flex;flex-wrap:wrap;gap:6px;padding:4px}
+  .jump button{flex:1 1 calc(50% - 6px);min-height:var(--tap);border:1px solid var(--br);background:#fff;border-radius:9px;
+               font-size:12.5px;font-weight:600;color:#333;cursor:pointer;padding:6px 8px}
+  .jump button:hover{background:#f2f6fb;border-color:var(--water);color:var(--water)}
+  .hint{padding:4px 8px 8px;font-size:11px;line-height:1.5;color:#888}
+
+  /* flood bar */
+  #flood{position:absolute;z-index:1000;bottom:12px;left:50%;transform:translateX(-50%);
+         width:min(620px,calc(100% - 20px));padding:10px 14px;display:flex;align-items:center;gap:12px}
+  #flood .lab{font-size:11px;color:#666;white-space:nowrap}
+  #flood input[type=range]{flex:1;accent-color:var(--water);height:var(--tap)}
+  #flood .read{font-weight:700;font-size:12.5px;color:var(--line);white-space:nowrap;min-width:118px;text-align:right}
+  #flood button{flex:none;height:36px;border:0;border-radius:9px;background:var(--water);color:#fff;font-weight:600;font-size:12.5px;padding:0 14px;cursor:pointer}
   #flood button:hover{background:#21588f}
-  /* view buttons */
-  #views{top:14px;right:14px;display:flex;flex-direction:column;gap:6px;padding:8px}
-  #views button{border:1px solid #d9d9d9;background:#fff;border-radius:6px;font-size:12px;
-                padding:7px 10px;cursor:pointer;font-weight:600;color:#333;text-align:left}
-  #views button:hover{background:#f2f6fb;border-color:var(--water);color:var(--water)}
-  /* historic-map control */
-  #histctl{top:104px;right:14px;padding:9px 11px;display:flex;flex-direction:column;gap:6px;max-width:172px}
-  #histctl label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:#333;cursor:pointer}
-  #histctl input[type=range]{width:100%;accent-color:#8a5a2b}
-  #histctl input[type=range]:disabled{opacity:.4}
-  #histctl .src{font-size:10px;color:#999;line-height:1.3}
-  /* legend */
-  #legend{bottom:22px;right:14px;padding:10px 12px;font-size:11.5px;line-height:1.7}
-  #legend .row{display:flex;align-items:center;gap:8px}
-  #legend .sw{width:16px;height:12px;border-radius:2px;display:inline-block;border:1px solid rgba(0,0,0,.25)}
+
+  .leaflet-control-attribution{font-size:9.5px}
   .leaflet-popup-content{font-family:Inter,sans-serif;font-size:12.5px;line-height:1.5}
   .leaflet-popup-content b{font-size:13.5px}
-  .pop table{border-collapse:collapse;margin:6px 0}
-  .pop td{padding:1px 8px 1px 0;font-variant-numeric:tabular-nums}
-  @media(max-width:600px){#intro{max-width:74vw}#views{padding:6px}#legend{display:none}}
+  .pop table{border-collapse:collapse;margin:5px 0}.pop td{padding:1px 8px 1px 0;font-variant-numeric:tabular-nums}
+  .muted{color:#888}
+
+  @media(max-width:640px){
+    #title small{display:none}
+    #about{top:60px;left:10px;right:10px;max-width:none}
+    /* controls become a bottom sheet */
+    #panel{top:auto;bottom:0;right:0;left:0;width:auto;max-height:72vh;border-radius:16px 16px 0 0;
+           padding:8px 8px calc(8px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .25s ease;display:block}
+    #panel.show{transform:translateY(0)}
+    #panel::before{content:"";display:block;width:38px;height:4px;border-radius:3px;background:#cfcfcf;margin:2px auto 8px}
+    #flood{bottom:10px;width:calc(100% - 16px);padding:8px 10px;gap:8px}
+    #flood .lab{display:none}
+    #flood .read{min-width:auto;font-size:12px}
+    #flood.dim{opacity:0;pointer-events:none}
+    .leaflet-control-zoom{display:none}
+  }
 </style>
 </head>
 <body>
 <div id="map"></div>
 
-<div id="intro" class="panel">
-  <h1>Quabbin Reservoir: the lost towns</h1>
-  <p>Between 1938 and 1946 the Swift River Valley was flooded to create the Quabbin Reservoir, disincorporating four towns — <b>Dana, Enfield, Greenwich, Prescott</b> — to supply metropolitan Boston. Use the slider to raise the pool to the 530&nbsp;ft full pool of 1946; toggle the 1893 map, or the LiDAR of the sites that stayed above water (Dana Common, the Prescott Peninsula).</p>
+<div id="bar">
+  <div id="title" class="card">Quabbin · lost towns<small>LiDAR imprint explorer</small></div>
+  <div class="spacer"></div>
+  <button id="aboutBtn" class="iconbtn" aria-label="About">ⓘ <span class="t">About</span></button>
+  <button id="layersBtn" class="iconbtn" aria-label="Layers">☰ <span class="t">Layers</span></button>
+</div>
+
+<div id="about" class="card">
+  <h1>The lost towns, written in the ground</h1>
+  <p>Between 1938 and 1946 the Swift River Valley was flooded for the Quabbin Reservoir, erasing four towns — <b>Dana, Enfield, Greenwich, Prescott</b>. On the land that never went under, the old <b>roads, cart paths and field walls</b> are still imprinted in the earth — and 1 m airborne <b>LiDAR</b> (bare-earth, forest digitally removed) reveals them.</p>
+  <p>Turn on <b>LiDAR imprints</b> and zoom in: the grey relief is the ground today. Hunt the faint lines — most are abandoned roads and stone walls. Toggle the <b>1893 survey</b> to check them, or raise the <b>pool</b> to see what drowned.</p>
   <div class="links">
-    <a href="../../quabbin.html">&larr; The full study</a>
-    <a href="https://github.com/mapzimus/maxwellhowegis/tree/main/quabbin" target="_blank" rel="noopener">R code &#8599;</a>
+    <a href="../../quabbin.html">← The full study</a>
+    <a href="https://github.com/mapzimus/maxwellhowegis/tree/main/quabbin" target="_blank" rel="noopener">R code ↗</a>
   </div>
 </div>
 
-<div id="views" class="panel">
-  <button id="vValley">⌖ The valley</button>
-  <button id="vGoes">→ Where the water goes</button>
-  <button id="vDana">▦ Dana Common (LiDAR)</button>
-  <button id="vPrescott">▦ Prescott Pen. (LiDAR)</button>
+<div id="panel" class="card">
+  <div class="grp">
+    <h2>Base</h2>
+    <label class="row"><input type="radio" name="base" id="bRelief" checked><span class="lab">Shaded relief</span></label>
+    <label class="row"><input type="radio" name="base" id="bPlain"><span class="lab">Plain map</span></label>
+  </div>
+  <div class="grp">
+    <h2>LiDAR imprints</h2>
+    <label class="row"><input type="checkbox" id="lRelief"><span class="sw" style="background:#9a9a9a"></span><span class="lab">Relief (1 m LiDAR)</span></label>
+    <label class="row"><input type="checkbox" id="lTrace"><span class="sw" style="background:linear-gradient(90deg,var(--road) 50%,var(--wall) 50%)"></span><span class="lab">Traced lines</span></label>
+    <div class="hint">Roads/paths in <b style="color:var(--road)">orange</b>, walls/banks in <b style="color:var(--wall)">teal</b> — auto-detected candidates.</div>
+    <div class="jump" id="jump"></div>
+  </div>
+  <div class="grp">
+    <h2>History &amp; water</h2>
+    <label class="row"><input type="checkbox" id="lHist"><span class="sw" style="background:#cdb892"></span><span class="lab">1893 survey map</span></label>
+    <div class="sub"><input id="histOpacity" type="range" min="0" max="100" value="80" disabled aria-label="1893 map opacity"></div>
+    <label class="row"><input type="checkbox" id="lTowns" checked><span class="sw" style="background:#fff;border-color:#1a1a1a"></span><span class="lab">Drowned town centers</span></label>
+    <label class="row"><input type="checkbox" id="lAqueduct"><span class="sw" style="background:#1f6fb0"></span><span class="lab">Aqueduct → Boston</span></label>
+    <label class="row"><input type="checkbox" id="lWatershed"><span class="sw" style="background:#2a9d8f;opacity:.5"></span><span class="lab">Watershed</span></label>
+  </div>
 </div>
 
-<div id="histctl" class="panel">
-  <label><input type="checkbox" id="histToggle"> 1893 map (pre-flood)</label>
-  <input id="histOpacity" type="range" min="0" max="100" value="80" disabled aria-label="Historic map opacity">
-  <div class="src">USGS Belchertown quad, 1893</div>
-</div>
-
-<div id="legend" class="panel">
-  <div class="row"><span class="sw" style="background:#2b6cb0"></span> Reservoir / rising pool</div>
-  <div class="row"><span class="sw" style="background:#2a9d8f;opacity:.4"></span> Watershed (USGS HUC-10)</div>
-  <div class="row"><span class="sw" style="background:#fff;border-color:#1a1a1a"></span> Drowned town</div>
-  <div class="row"><span class="sw" style="background:#1f6fb0"></span> Aqueduct &rarr; Boston</div>
-  <div class="row"><span class="sw" style="background:#cdb892"></span> 1893 USGS map (toggle)</div>
-  <div class="row"><span class="sw" style="background:#9a9a9a"></span> LiDAR of surviving sites</div>
-</div>
-
-<div id="flood" class="panel">
-  <span class="lab">valley floor</span>
-  <input id="slider" type="range" min="1" max="14" value="14" step="1">
-  <span class="lab">full pool</span>
-  <span class="read" id="readout">530 ft · 100% full</span>
-  <button id="play">▶ Play</button>
+<div id="flood" class="card">
+  <span class="lab">valley</span>
+  <input id="slider" type="range" min="1" max="14" value="14" step="1" aria-label="Reservoir pool level">
+  <span class="lab">full</span>
+  <span class="read" id="readout">530 ft · 100%</span>
+  <button id="play">▶</button>
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
 <script>
 const DATA = "data/";
-const map = L.map("map", { zoomControl:true, minZoom:8, maxZoom:15 }).setView([42.32,-72.33], 11);
+const map = L.map("map", { zoomControl:true, minZoom:8, maxZoom:17, attributionControl:true }).setView([42.36,-72.33], 11);
+map.zoomControl.setPosition("topleft");
 
-// --- base layers (keyless) ---
-// labels get their own pane so they sit above the water polygons but below markers
-map.createPane("labels");
-map.getPane("labels").style.zIndex = 450;
-map.getPane("labels").style.pointerEvents = "none";
-// historic map sits above the basemap but below the vector overlays
-map.createPane("hist");
-map.getPane("hist").style.zIndex = 350;
-// LiDAR sits just above the 1893 map, still below the vector overlays
-map.createPane("lidar");
-map.getPane("lidar").style.zIndex = 360;
+// panes: hist < relief < trace < (vectors/markers default 400+)
+[["labels",450],["hist",350],["lidar",360],["trace",365]].forEach(([n,z])=>{
+  map.createPane(n); map.getPane(n).style.zIndex=z; if(n==="labels")map.getPane(n).style.pointerEvents="none";
+});
 
-const relief = L.tileLayer(
-  "https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",
-  { attribution:"Hillshade: Esri, USGS", maxZoom:15 });
-const labels = L.tileLayer(
-  "https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",
-  { attribution:"Labels: CARTO", pane:"labels" });
-const reliefBase = L.layerGroup([relief, labels]).addTo(map);
-const plain = L.tileLayer(
-  "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  { attribution:"&copy; OpenStreetMap, &copy; CARTO" });
+const relief = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",{attribution:"Hillshade: Esri, USGS",maxZoom:17});
+const labels = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",{pane:"labels",maxZoom:20});
+const plain  = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"© OpenStreetMap, © CARTO",maxZoom:20});
+const reliefBase = L.layerGroup([relief,labels]).addTo(map);
 
 const styles = {
-  watershed:{ color:"#13564d", weight:1.5, fillColor:"#2a9d8f", fillOpacity:.14 },
-  reservoirOutline:{ color:"#0b3d66", weight:1, opacity:.5, dashArray:"3 4", fill:false },
-  flood:{ color:"#0b3d66", weight:.6, fillColor:"#2b6cb0", fillOpacity:.85 },
-  aqueduct:{ color:"#1f6fb0", weight:3 }
+  watershed:{color:"#13564d",weight:1.5,fillColor:"#2a9d8f",fillOpacity:.12},
+  reservoirOutline:{color:"#0b3d66",weight:1,opacity:.5,dashArray:"3 4",fill:false},
+  flood:{color:"#0b3d66",weight:.6,fillColor:"#2b6cb0",fillOpacity:.82},
+  aqueduct:{color:"#1f6fb0",weight:3}
 };
-
-let floodFeatures=[], floodLayer=L.geoJSON(null,{style:styles.flood}).addTo(map);
-const layers = {};   // toggleable overlays
-
 const fmt = n => n==null ? "—" : n.toLocaleString();
+const reliefGroup = L.layerGroup(), traceGroup = L.layerGroup();
+let floodFeatures=[], floodLayer=L.geoJSON(null,{style:styles.flood}).addTo(map);
+let histOv=null, townsLayer=null, aqueductGroup=null, watershedLayer=null;
 
-function townPopup(p){
-  return `<div class="pop"><b>${p.town}</b> <span class="muted">${p.county} County</span><br>
-    Chartered <b>${p.incorporated}</b> · disincorporated <b>1938</b>
-    <table>
-      <tr><td class="muted">1900</td><td>${fmt(p.pop1900)}</td></tr>
-      <tr><td class="muted">1910</td><td>${fmt(p.pop1910)}</td></tr>
-      <tr><td class="muted">1920</td><td>${fmt(p.pop1920)}</td></tr>
-    </table>
-    <span class="muted">${p.note||""}</span></div>`;
-}
+function townPopup(p){ return `<div class="pop"><b>${p.town}</b> <span class="muted">${p.county} County</span><br>
+  Chartered <b>${p.incorporated}</b> · disincorporated <b>1938</b>
+  <table><tr><td class="muted">1900</td><td>${fmt(p.pop1900)}</td></tr>
+  <tr><td class="muted">1910</td><td>${fmt(p.pop1910)}</td></tr>
+  <tr><td class="muted">1920</td><td>${fmt(p.pop1920)}</td></tr></table>
+  <span class="muted">${p.note||""}</span></div>`; }
 
-Promise.all([
-  "towns","reservoir","watershed","floodstages","aqueduct","infrastructure"
-].map(n => fetch(DATA+n+".geojson").then(r=>r.ok?r.json():null).catch(()=>null)))
+// ---- load vector data ----
+Promise.all(["towns","reservoir","watershed","floodstages","aqueduct","infrastructure"]
+  .map(n=>fetch(DATA+n+".geojson").then(r=>r.ok?r.json():null).catch(()=>null)))
 .then(([towns,reservoir,watershed,floodstages,aqueduct,infra])=>{
-
-  if(watershed){ layers.Watershed = L.geoJSON(watershed,{style:styles.watershed}); }
-  if(reservoir){ L.geoJSON(reservoir,{style:styles.reservoirOutline}).addTo(map); }
-
-  if(floodstages){
-    floodFeatures = floodstages.features.sort((a,b)=>a.properties.stage-b.properties.stage);
-    slider.max = floodFeatures.length;
-    slider.value = floodFeatures.length;
-    setStage(floodFeatures.length);
-  }
-
-  if(aqueduct||infra){
-    const grp = L.layerGroup();
-    if(aqueduct) L.geoJSON(aqueduct,{style:styles.aqueduct}).addTo(grp);
-    if(infra) L.geoJSON(infra,{ pointToLayer:(f,ll)=>{
-      const t=f.properties.type;
-      const c = t==="city" ? {r:8,color:"#fff",fill:"#d62828"} :
-                t==="reservoir" ? {r:5,color:"#0b3d66",fill:"#2b6cb0"} :
-                {r:5,color:"#fff",fill:"#444"};
-      return L.circleMarker(ll,{radius:c.r,color:c.color,weight:1.5,fillColor:c.fill,fillOpacity:1})
-              .bindTooltip(f.properties.name,{permanent:t==="city",direction:"top",className:"infra-tip"});
-    }}).addTo(grp);
-    grp.addTo(map);
-    layers["Aqueduct → Boston"]=grp;
-  }
-
-  if(towns){
-    layers["Drowned towns"] = L.geoJSON(towns,{ pointToLayer:(f,ll)=>
+  if(reservoir) L.geoJSON(reservoir,{style:styles.reservoirOutline}).addTo(map);
+  if(watershed) watershedLayer = L.geoJSON(watershed,{style:styles.watershed});
+  if(floodstages){ floodFeatures = floodstages.features.sort((a,b)=>a.properties.stage-b.properties.stage);
+    const sl=document.getElementById("slider"); sl.max=floodFeatures.length; sl.value=floodFeatures.length; setStage(floodFeatures.length); }
+  if(aqueduct||infra){ aqueductGroup=L.layerGroup();
+    if(aqueduct) L.geoJSON(aqueduct,{style:styles.aqueduct}).addTo(aqueductGroup);
+    if(infra) L.geoJSON(infra,{pointToLayer:(f,ll)=>{const t=f.properties.type;
+      const c=t==="city"?{r:7,color:"#fff",fill:"#d62828"}:t==="reservoir"?{r:5,color:"#0b3d66",fill:"#2b6cb0"}:{r:5,color:"#fff",fill:"#444"};
+      return L.circleMarker(ll,{radius:c.r,color:c.color,weight:1.5,fillColor:c.fill,fillOpacity:1}).bindTooltip(f.properties.name,{permanent:t==="city",direction:"top"});}}).addTo(aqueductGroup); }
+  if(towns){ townsLayer = L.geoJSON(towns,{pointToLayer:(f,ll)=>
       L.circleMarker(ll,{radius:6,color:"#1a1a1a",weight:1.5,fillColor:"#fff",fillOpacity:1})
-       .bindPopup(townPopup(f.properties))
-       .bindTooltip(f.properties.town,{permanent:true,direction:"top",offset:[0,-6],className:"town-tip"})
-    }).addTo(map);
-  }
-
-  // overlay toggle control
-  const layerCtl = L.control.layers(
-    { "Shaded relief":reliefBase, "Plain map":plain },
-    layers, {collapsed:false, position:"bottomleft"}
-  ).addTo(map);
-
-  // LiDAR overlays of the surviving sites (PNG, transparent over water)
-  [ {f:"lidar_dana",     n:"LiDAR: Dana Common",        btn:"vDana"},
-    {f:"lidar_prescott", n:"LiDAR: Prescott Peninsula", btn:"vPrescott"} ].forEach(s=>{
-    fetch(DATA+s.f+".json").then(r=>r.ok?r.json():null).then(meta=>{
-      if(!meta) return;
-      const ov = L.imageOverlay(DATA+meta.image, meta.bounds, {opacity:0.92, pane:"lidar"});
-      layerCtl.addOverlay(ov, s.n);
-      const b = document.getElementById(s.btn);
-      if(b) b.onclick = ()=>{ ov.addTo(map); map.fitBounds(meta.bounds, {padding:[40,40]}); };
-    }).catch(()=>{});
-  });
+       .bindPopup(townPopup(f.properties)).bindTooltip(f.properties.town,{permanent:true,direction:"top",offset:[0,-6]})}).addTo(map); }
 });
 
-// --- pre-flood 1893 map overlay (fade between then and now) ---
-fetch(DATA+"preflood.json").then(r=>r.ok?r.json():null).then(meta=>{
-  if(!meta) return;
-  const ov = L.imageOverlay(DATA+meta.image, meta.bounds, {opacity:0.8, pane:"hist"});
-  const tog = document.getElementById("histToggle");
-  const op  = document.getElementById("histOpacity");
-  tog.addEventListener("change", ()=>{
-    if(tog.checked){ ov.addTo(map); op.disabled=false; }
-    else { map.removeLayer(ov); op.disabled=true; }
-  });
-  op.addEventListener("input", ()=> ov.setOpacity(+op.value/100));
+// ---- 1893 overlay ----
+fetch(DATA+"preflood.json").then(r=>r.ok?r.json():null).then(meta=>{ if(!meta) return;
+  histOv = L.imageOverlay(DATA+meta.image, meta.bounds, {opacity:0.8, pane:"hist"});
+  const op=document.getElementById("histOpacity");
+  op.addEventListener("input",()=>histOv.setOpacity(+op.value/100));
 }).catch(()=>{});
 
-// --- flood slider ---
-function setStage(stage){
-  const f = floodFeatures.find(x=>x.properties.stage===stage);
-  if(!f) return;
-  floodLayer.clearLayers().addData(f);
-  const p=f.properties;
-  document.getElementById("readout").textContent =
-    `${p.pool_ft} ft · ${p.pct}% full` + (stage===floodFeatures.length ? " (1946)" : "");
-}
-const slider=document.getElementById("slider");
-slider.addEventListener("input",e=>setStage(+e.target.value));
+// ---- LiDAR imprint overlays + jump-to buttons ----
+fetch(DATA+"imprints.json").then(r=>r.ok?r.json():null).then(list=>{
+  if(!list) return; const jump=document.getElementById("jump");
+  list.forEach(s=>{
+    reliefGroup.addLayer(L.imageOverlay(DATA+"imprint_"+s.slug+".png", s.bounds,{opacity:0.95,pane:"lidar"}));
+    traceGroup .addLayer(L.imageOverlay(DATA+"imprint_"+s.slug+"_trace.png", s.bounds,{opacity:0.95,pane:"trace"}));
+    const b=document.createElement("button"); b.textContent="◎ "+s.label.replace(/\s*\(.*\)/,"");
+    b.onclick=()=>{ setChk("lRelief",true); map.fitBounds(s.bounds,{padding:[24,24]}); closeSheetMobile(); };
+    jump.appendChild(b);
+  });
+}).catch(()=>{});
 
+// ---- flood slider ----
+function setStage(stage){ const f=floodFeatures.find(x=>x.properties.stage===stage); if(!f) return;
+  floodLayer.clearLayers().addData(f); const p=f.properties;
+  document.getElementById("readout").textContent=`${p.pool_ft} ft · ${p.pct}%`+(stage===floodFeatures.length?" (1946)":""); }
+document.getElementById("slider").addEventListener("input",e=>setStage(+e.target.value));
 let timer=null;
 document.getElementById("play").addEventListener("click",function(){
-  if(timer){ clearInterval(timer); timer=null; this.textContent="▶ Play"; return; }
-  this.textContent="❚❚ Pause";
-  const last = floodFeatures.length || 1;
-  let s = (+slider.value>=last)?1:+slider.value;
-  slider.value=s; setStage(s);
-  timer=setInterval(()=>{
-    s++;
-    if(s>last){ clearInterval(timer); timer=null; document.getElementById("play").textContent="▶ Play"; return; }
-    slider.value=s; setStage(s);
-  },550);
+  if(timer){clearInterval(timer);timer=null;this.textContent="▶";return;}
+  this.textContent="❚❚"; const last=floodFeatures.length||1; const sl=document.getElementById("slider");
+  let s=(+sl.value>=last)?1:+sl.value; sl.value=s; setStage(s);
+  timer=setInterval(()=>{s++; if(s>last){clearInterval(timer);timer=null;document.getElementById("play").textContent="▶";return;} sl.value=s; setStage(s);},560);
 });
 
-// --- view buttons ---
-document.getElementById("vValley").onclick=()=>map.setView([42.32,-72.33],11,{animate:true});
-document.getElementById("vGoes").onclick=()=>map.fitBounds([[42.18,-72.45],[42.55,-71.00]],{padding:[30,30]});
+// ---- layer toggles ----
+function toggle(layer,on){ if(!layer) return; on?map.addLayer(layer):map.removeLayer(layer); }
+function bindChk(id,getLayer,extra){ const el=document.getElementById(id);
+  el.addEventListener("change",()=>{ toggle(getLayer(),el.checked); if(extra)extra(el.checked); }); }
+function setChk(id,val){ const el=document.getElementById(id); if(el.checked!==val){ el.checked=val; el.dispatchEvent(new Event("change")); } }
+
+bindChk("lRelief",()=>reliefGroup);
+bindChk("lTrace",()=>traceGroup);
+bindChk("lTowns",()=>townsLayer);
+bindChk("lAqueduct",()=>aqueductGroup);
+bindChk("lWatershed",()=>watershedLayer);
+bindChk("lHist",()=>histOv,on=>{ document.getElementById("histOpacity").disabled=!on; });
+
+document.getElementById("bRelief").addEventListener("change",()=>{ map.removeLayer(plain); map.addLayer(reliefBase); });
+document.getElementById("bPlain").addEventListener("change",()=>{ map.removeLayer(reliefBase); map.addLayer(plain); });
+
+// ---- panels (about / layers; bottom sheet on mobile) ----
+const panel=document.getElementById("panel"), about=document.getElementById("about");
+const layersBtn=document.getElementById("layersBtn"), aboutBtn=document.getElementById("aboutBtn");
+const isMobile=()=>matchMedia("(max-width:640px)").matches;
+function closeSheetMobile(){ if(isMobile()){ panel.classList.remove("show"); layersBtn.classList.remove("on"); document.getElementById("flood").classList.remove("dim"); } }
+layersBtn.addEventListener("click",()=>{ const open=!panel.classList.contains("show");
+  panel.classList.toggle("show",open); layersBtn.classList.toggle("on",open);
+  if(isMobile()) document.getElementById("flood").classList.toggle("dim",open);
+  if(open){ about.classList.remove("show"); aboutBtn.classList.remove("on"); } });
+aboutBtn.addEventListener("click",()=>{ const open=!about.classList.contains("show");
+  about.classList.toggle("show",open); aboutBtn.classList.toggle("on",open);
+  if(open){ closeSheetMobile(); } });
+map.on("click",()=>{ closeSheetMobile(); about.classList.remove("show"); aboutBtn.classList.remove("on"); });
+
+// open the controls by default on desktop; closed on mobile
+if(!isMobile()){ panel.classList.add("show"); layersBtn.classList.add("on"); }
+else { about.classList.add("show"); aboutBtn.classList.add("on"); }
 </script>
 </body>
 </html>

@@ -30,6 +30,7 @@ source(file.path(QB_DIR, "R", "10_terrain3d.R"))
 source(file.path(QB_DIR, "R", "11_preflood.R"))
 source(file.path(QB_DIR, "R", "12_lidar.R"))
 source(file.path(QB_DIR, "R", "13_roads.R"))
+source(file.path(QB_DIR, "R", "14_imprints.R"))
 
 pngs <- list.files(DIR_OUTPUT, pattern = "\\.png$")
 msg("DONE in %.0f s - %d figure(s) in %s",
