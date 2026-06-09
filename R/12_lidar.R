@@ -5,14 +5,14 @@
 # map and the 1 m bare-earth LiDAR of the *same ground*, at the same extent, with
 # the former town centre marked on both -- so you can see where the roads, houses
 # and common were, and what survives (or drowned) today. On the LiDAR a local
-# relief model flags depressions (cellar holes, road cuts) in red. Also exports
-# land-only LiDAR overlays for the interactive map.
+# relief model flags depressions (cellar holes, road cuts) in red. (The explorer's
+# relief now comes from the full-reservoir ghost layer in 16_reservoir.R; this
+# stage renders the static then-&-now figures only.)
 # Sources: USGS 3DEP elevation + Historical Topographic Map Collection (public domain).
 # -------------------------------------------------------------------------
 
 if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() else file.path(getwd(), "quabbin")
 if (!exists("reservoir_ma")) source(file.path(QB_DIR, "R", "02_build_layers.R"))
-DIR_WEB <- file.path(QB_DIR, "map", "data"); dir.create(DIR_WEB, recursive = TRUE, showWarnings = FALSE)
 
 TOPO_1893 <- file.path(DIR_CACHE, "preflood_belchertown_1893.tif")  # fetched by 11_preflood.R
 
@@ -105,19 +105,7 @@ for (s in sites) {
       caption = "Left: USGS Belchertown 15' quad, 1893. Right: USGS 3DEP 1 m bare-earth LiDAR. Same extent; public domain.",
       theme = theme_quabbin())
   save_map(out, s$file, w = s$w, h = s$h)
-
-  # --- web overlay: blended relief as RGBA PNG (transparent over water) ----
-  alpha <- terra::ifel(water | is.na(hs), 0, 255)
-  rgba  <- terra::project(c(rgb[[1]], rgb[[2]], rgb[[3]], alpha), "EPSG:4326")
-  f <- max(1, round(terra::ncol(rgba) / 850)); if (f > 1) rgba <- terra::aggregate(rgba, f, fun = "mean", na.rm = TRUE)
-  rgba <- terra::ifel(is.na(rgba), 0, rgba)
-  png_out <- file.path(DIR_WEB, paste0(s$web, ".png"))
-  terra::writeRaster(rgba, png_out, datatype = "INT1U", overwrite = TRUE)
-  unlink(c(file.path(DIR_WEB, paste0(s$web, ".jpg")), list.files(DIR_WEB, pattern = "\\.aux\\.xml$", full.names = TRUE)))
-  writeLines(sprintf('{"image":"%s.png","bounds":[[%.5f,%.5f],[%.5f,%.5f]],"source":"USGS 3DEP 1 m LiDAR bare earth"}',
-                     s$web, s$bbox[2], s$bbox[1], s$bbox[4], s$bbox[3]),
-             file.path(DIR_WEB, paste0(s$web, ".json")))
-  msg("wrote %s + %s.png (%.2f MB)", s$file, s$web, file.size(png_out) / 1e6)
+  msg("wrote %s", s$file)
 }
 
 msg("lidar stage complete")

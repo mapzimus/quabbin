@@ -159,7 +159,7 @@ for (a in AREAS) {
     writeLines(sprintf('  {"slug":"%s","label":"%s","bounds":[[%.6f,%.6f],[%.6f,%.6f]]}',
                        a$slug, a$label, bounds[1], bounds[2], bounds[3], bounds[4]), file.path(DIR_WEB, paste0(".bounds_", a$slug)))
     msg("imprints: %s done (trace overlay + survey figure)", a$slug)
-  } else msg("imprints: %s done (static survey figure only)", a$slug)
+  }
 }
 
 # assemble the explorer manifest from each web area's bounds sidecar (in AREAS order)

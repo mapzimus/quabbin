@@ -181,7 +181,8 @@ never breaks the run — it degrades to a documented fallback instead.
   hillshade carries the terrain; a local relief model (elevation minus its local
   mean) then flags genuine depressions deeper than ~0.5 m — cellar holes and road
   cuts — in red, with a slope mask so natural gullies on the flanks aren't false-
-  flagged. Exported as land-only overlays (transparent over water) for the map.
+  flagged. Paired with the 1893 quad as static then-&-now figures (the explorer's
+  relief now comes from the full-reservoir ghost layer, `16_reservoir.R`).
   Submerged areas are not shown: the buildings were demolished and LiDAR cannot
   penetrate water, and the conservative threshold under-flags rather than fills the
   frame with canopy noise.
