@@ -147,7 +147,7 @@ for (a in AREAS) {
 
   # ---- web overlays ----
   if (isTRUE(a$web)) {
-    md <- if (isTRUE(a$tiled)) 2200 else 1100
+    md <- if (isTRUE(a$tiled)) 6100 else 1400   # peninsula at full ~2 m so it stays crisp when zoomed in
     A <- terra::ifel(water | is.na(demS), 0, 235)
     bounds <- write_overlay(base, base, base, A, paste0("imprint_", a$slug), md)
     hasline <- (!is.na(roads)) | (!is.na(walls))

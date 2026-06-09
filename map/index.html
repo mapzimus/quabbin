@@ -38,17 +38,17 @@
   #about a:hover{text-decoration:underline}
 
   /* controls panel */
-  #panel{position:absolute;z-index:1001;top:64px;right:10px;width:268px;max-height:calc(100% - 150px);
+  #panel{position:absolute;z-index:1001;top:64px;right:10px;width:264px;max-height:calc(100% - 176px);
          overflow:auto;padding:6px;display:none}
   #panel.show{display:block}
-  .grp{padding:8px 8px 4px}
-  .grp h2{margin:0 0 6px;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#8a8a8a}
-  .row{display:flex;align-items:center;gap:9px;min-height:38px;padding:2px 4px;border-radius:8px;cursor:pointer;font-size:13px}
+  .grp{padding:6px 8px 2px}
+  .grp h2{margin:0 0 3px;font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:#8a8a8a}
+  .row{display:flex;align-items:center;gap:9px;min-height:33px;padding:2px 4px;border-radius:8px;cursor:pointer;font-size:13px}
   .row:hover{background:#f3f6fb}
   .row input{width:18px;height:18px;accent-color:var(--water);flex:none}
   .row .sw{width:16px;height:12px;border-radius:3px;border:1px solid rgba(0,0,0,.25);flex:none}
   .row .lab{flex:1}
-  .sub{padding:2px 4px 8px 31px}
+  .sub{padding:2px 4px 8px 31px;display:none}
   .sub input[type=range]{width:100%;accent-color:#8a5a2b}
   .jump{display:flex;flex-wrap:wrap;gap:6px;padding:4px}
   .jump button{flex:1 1 calc(50% - 6px);min-height:var(--tap);border:1px solid var(--br);background:#fff;border-radius:9px;
@@ -65,6 +65,7 @@
   #flood button{flex:none;height:36px;border:0;border-radius:9px;background:var(--water);color:#fff;font-weight:600;font-size:12.5px;padding:0 14px;cursor:pointer}
   #flood button:hover{background:#21588f}
 
+  .leaflet-top.leaflet-left{margin-top:62px}   /* drop the zoom control below the title chip */
   .leaflet-control-attribution{font-size:9.5px}
   .leaflet-popup-content{font-family:Inter,sans-serif;font-size:12.5px;line-height:1.5}
   .leaflet-popup-content b{font-size:13.5px}
@@ -123,7 +124,7 @@
   <div class="grp">
     <h2>History &amp; water</h2>
     <label class="row"><input type="checkbox" id="lHist"><span class="sw" style="background:#cdb892"></span><span class="lab">1893 survey map</span></label>
-    <div class="sub"><input id="histOpacity" type="range" min="0" max="100" value="80" disabled aria-label="1893 map opacity"></div>
+    <div class="sub" id="histSub"><input id="histOpacity" type="range" min="0" max="100" value="80" aria-label="1893 map opacity"></div>
     <label class="row"><input type="checkbox" id="lTowns" checked><span class="sw" style="background:#fff;border-color:#1a1a1a"></span><span class="lab">Drowned town centers</span></label>
     <label class="row"><input type="checkbox" id="lAqueduct"><span class="sw" style="background:#1f6fb0"></span><span class="lab">Aqueduct → Boston</span></label>
     <label class="row"><input type="checkbox" id="lWatershed"><span class="sw" style="background:#2a9d8f;opacity:.5"></span><span class="lab">Watershed</span></label>
@@ -141,7 +142,7 @@
 <script src="vendor/leaflet/leaflet.js"></script>
 <script>
 const DATA = "data/";
-const map = L.map("map", { zoomControl:true, minZoom:8, maxZoom:17, attributionControl:true }).setView([42.36,-72.33], 11);
+const map = L.map("map", { zoomControl:true, minZoom:8, maxZoom:19, attributionControl:true }).setView([42.36,-72.33], 11);
 map.zoomControl.setPosition("topleft");
 
 // panes: hist < relief < trace < (vectors/markers default 400+)
@@ -149,9 +150,9 @@ map.zoomControl.setPosition("topleft");
   map.createPane(n); map.getPane(n).style.zIndex=z; if(n==="labels")map.getPane(n).style.pointerEvents="none";
 });
 
-const relief = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",{attribution:"Hillshade: Esri, USGS",maxZoom:17});
-const labels = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",{pane:"labels",maxZoom:20});
-const plain  = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"© OpenStreetMap, © CARTO",maxZoom:20});
+const relief = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",{attribution:"Hillshade: Esri, USGS",maxNativeZoom:16,maxZoom:19});
+const labels = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",{pane:"labels",maxNativeZoom:19,maxZoom:19});
+const plain  = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"© OpenStreetMap, © CARTO",maxNativeZoom:19,maxZoom:19});
 const reliefBase = L.layerGroup([relief,labels]).addTo(map);
 
 const styles = {
@@ -233,7 +234,7 @@ bindChk("lTrace",()=>traceGroup);
 bindChk("lTowns",()=>townsLayer);
 bindChk("lAqueduct",()=>aqueductGroup);
 bindChk("lWatershed",()=>watershedLayer);
-bindChk("lHist",()=>histOv,on=>{ document.getElementById("histOpacity").disabled=!on; });
+bindChk("lHist",()=>histOv,on=>{ document.getElementById("histSub").style.display = on ? "block" : "none"; });
 
 document.getElementById("bRelief").addEventListener("change",()=>{ map.removeLayer(plain); map.addLayer(reliefBase); });
 document.getElementById("bPlain").addEventListener("change",()=>{ map.removeLayer(reliefBase); map.addLayer(plain); });
