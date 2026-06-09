@@ -116,7 +116,7 @@ AREAS <- list(
 
 for (a in AREAS) {
   fig <- file.path(DIR_OUTPUT, paste0("24_", a$slug, "_survey.png"))
-  ovl <- file.path(DIR_WEB, paste0("imprint_", a$slug, ".png"))
+  ovl <- file.path(DIR_WEB, paste0("imprint_", a$slug, "_trace.png"))
   if (file.exists(fig) && (!isTRUE(a$web) || file.exists(ovl))) { msg("imprints: %s cached, skipping", a$slug); next }
 
   dem <- fetch_dem(a); if (is.null(dem)) { msg("MassGIS unavailable for %s; skipping", a$slug); next }
