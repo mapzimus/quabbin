@@ -37,6 +37,7 @@ present-day map in which their land has been absorbed by the surrounding towns.
 | 18 | `24_enfield_survey.png` | Enfield (Winsor Dam): surviving roads on the dry south vs. the drowned center | MassGIS 1 m LiDAR + 1893 quad |
 | 19 | `24_dana_survey.png` | Dana Common: the surviving common/ridge vs. the drowned village | MassGIS 1 m LiDAR + 1893 quad |
 | 20 | `24_greenwich_survey.png` | Greenwich: the 1893 village vs. its site, now entirely under water | MassGIS 1 m LiDAR + 1893 quad |
+| 21 | `25_prescott_xref.png` | Ground-truth: the 1893 road network extracted and cross-referenced against the LiDAR traces | MassGIS LiDAR + 1893 quad |
 
 Plus a **reservoir-filling animation** (`quabbin_floodfill.gif`) and an
 **interactive LiDAR imprint explorer** in [`map/`](map/) (mobile-first Leaflet):
@@ -66,10 +67,10 @@ Rscript quabbin/run_all.R
 
 Downloads are cached under `quabbin/data/cache/` (git-ignored), so the first
 run takes a few minutes and every run after that is ~90 seconds — except the
-imprint survey (stage 14), which mosaics the Prescott Peninsula and is
+imprint survey (stages 14–15), which mosaics the Prescott Peninsula and is
 cache-guarded: its first build takes several minutes, then later runs skip any
-area whose `output/24_*_survey.png` already exists (delete one to force a
-rebuild). The twenty figures and the GIF land in `quabbin/output/`; the web-map
+area whose `output/24_*_survey.png` (or `25_prescott_xref.png`) already exists
+(delete one to force a rebuild). The twenty-one figures and the GIF land in `quabbin/output/`; the web-map
 GeoJSON, the 1893 overlay, and the LiDAR imprint overlays land in
 `quabbin/map/data/`. (The GIF needs
 ImageMagick — `apt-get install imagemagick`; without it the pipeline still
@@ -98,7 +99,8 @@ quabbin/
 │   ├── 11_preflood.R      process the 1893 USGS quad into the web overlay
 │   ├── 12_lidar.R         USGS 3DEP LiDAR of Dana Common & the Prescott Peninsula
 │   ├── 13_roads.R         the valley's 1893 road network, reservoir overlaid
-│   └── 14_imprints.R      LiDAR imprint survey (MassGIS 1 m) + web explorer overlays
+│   ├── 14_imprints.R      LiDAR imprint survey (MassGIS) + web explorer overlays
+│   └── 15_xref.R          cross-reference: extracted 1893 roads vs the LiDAR traces
 ├── data/
 │   ├── drowned_towns.csv  the four towns: location, county, charter & end dates
 │   └── town_population.csv real US Census counts 1900–1920 + peaks + 1938 dissolution
@@ -210,6 +212,15 @@ never breaks the run — it degrades to a documented fallback instead.
   with per-area "jump to" buttons, the 1893 fade overlay, the drowned-town popups, the
   flood stages, and the aqueduct, over Esri World Hillshade + CARTO label tiles. The
   basemap tiles need internet; every layer the study itself produces is served locally.
+- **Ground-truth cross-reference** (`15_xref.R`) — closes the loop on the imprints:
+  it extracts the 1893 road network straight from the quad (dark, low-saturation
+  linework, morphologically closed, kept only where elongated → roads, not text),
+  then classifies the LiDAR road traces by proximity — within 14 m of a mapped 1893
+  road = a **confirmed surviving roadbed** (green), the rest unverified (orange).
+  Demonstrated on the mid-peninsula (the old Prescott village area). **Honest limit:**
+  auto-extraction of the scanned linework catches the main roads, not the full
+  network, so "unverified" is *not* "newly discovered"; the explorer's 1893 fade
+  overlay remains the fuller visual ground-truth. Renders `output/25_prescott_xref.png`.
 
 ## Stack
 
