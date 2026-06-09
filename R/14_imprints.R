@@ -3,9 +3,11 @@
 # the four lost towns, as it still survives in the ground on the dry land that
 # never went under. Uses MassGIS 1 m bare-earth LiDAR (2013-2021), rendered as a
 # composite relief (multi-direction hillshade emphasised by a Local Relief
-# Model) that makes faint linear features read, and an automatic trace of the
+# Model) that makes faint linear features read, plus an automatic trace of the
 # linear cuts (roads/paths) and banks (walls). Ground-truthed against the 1893
-# USGS quad. Exports static survey figures AND web overlays for the explorer.
+# USGS quad. The Prescott Peninsula is mosaicked from tiles to cover its whole
+# length. Exports static survey figures AND web overlays for the explorer.
+# Heavy work is cache-guarded (skip if the figure exists) so re-runs are fast.
 # Data: MassGIS LiDAR DEM ImageServer (public); USGS Historical Topo (public).
 # -------------------------------------------------------------------------
 if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() else file.path(getwd(), "quabbin")
@@ -22,28 +24,10 @@ mdow <- function(dem, angle = 35) {
   hs <- Reduce(`+`, lapply(seq(0, 315, 45), function(a) terra::shade(slp, asp, angle = angle, direction = a))) / 8
   terra::clamp((hs - 0.5) * 1.6 + 0.5, 0, 1)
 }
-
-fetch_massgis <- function(bbox, dst) {
-  if (!file.exists(dst) || file.size(dst) < 1e5) {
-    latm <- mean(c(bbox[2], bbox[4]))
-    w <- round((bbox[3] - bbox[1]) * cos(latm * pi / 180) * 111320)
-    h <- round((bbox[4] - bbox[2]) * 111320)
-    if (w * h > 4.0e6) { f <- sqrt(4.0e6 / (w * h)); w <- floor(w * f); h <- floor(h * f) }  # stay under server limit
-    url <- sprintf("%s?bbox=%f,%f,%f,%f&bboxSR=4326&size=%d,%d&imageSR=26986&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image",
-                   MG, bbox[1], bbox[2], bbox[3], bbox[4], w, h)
-    for (try in 1:3) { ok <- tryCatch({ download.file(url, dst, mode = "wb", quiet = TRUE); file.exists(dst) && file.size(dst) > 1e5 }, error = function(e) FALSE)
-      if (ok) break; Sys.sleep(2 * try) }
-  }
-  if (file.exists(dst) && file.size(dst) > 1e5) dst else NA_character_
-}
-
-# composite-lite relief: multi-direction hillshade, cuts darkened & banks lifted by LRM
 relief_grey <- function(demS, L, span) {
   hs <- mdow(demS); neg <- terra::clamp(-L / span, 0, 1); pos <- terra::clamp(L / span, 0, 1)
   terra::clamp(hs * (1 - 0.5 * neg) + 0.32 * pos * (1 - hs), 0, 1)
 }
-
-# elongated connected components of (signed relief > thr) on gentle, dry ground
 extract_lines <- function(signed, thr, slope, slopemax, water, Nmin, Emin, Lmin) {
   mask <- terra::ifel(signed > thr & slope < slopemax & !water, 1, NA)
   p <- terra::patches(mask, directions = 8, zeroAsNA = TRUE)
@@ -57,20 +41,51 @@ extract_lines <- function(signed, thr, slope, slopemax, water, Nmin, Emin, Lmin)
   if (length(keep)) terra::subst(p, keep, 1, others = NA) else p * NA
 }
 
-render_one <- function(ras, sub, e, file, w = 6, h = 6.4) {
+dl_window <- function(bbox, dst, mpp) {
+  if (!file.exists(dst) || file.size(dst) < 1e5) {
+    latm <- mean(c(bbox[2], bbox[4]))
+    w <- round((bbox[3] - bbox[1]) * cos(latm * pi / 180) * 111320 / mpp); h <- round((bbox[4] - bbox[2]) * 111320 / mpp)
+    if (w * h > 4.0e6) { f <- sqrt(4.0e6 / (w * h)); w <- floor(w * f); h <- floor(h * f) }
+    url <- sprintf("%s?bbox=%f,%f,%f,%f&bboxSR=4326&size=%d,%d&imageSR=26986&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image",
+                   MG, bbox[1], bbox[2], bbox[3], bbox[4], w, h)
+    for (k in 1:6) { ok <- tryCatch({ download.file(url, dst, mode = "wb", quiet = TRUE); file.exists(dst) && file.size(dst) > 1e5 }, error = function(e) FALSE)
+      if (ok) break; Sys.sleep(2 * k) }   # MassGIS throws intermittent 500s; retry resolves them
+  }
+  if (file.exists(dst) && file.size(dst) > 1e5) dst else NA_character_
+}
+# single-window DEM (1 m) or a multi-strip mosaic for long areas (Prescott Peninsula)
+fetch_dem <- function(a) {
+  mpp <- if (is.null(a$mpp)) 1 else a$mpp
+  if (isTRUE(a$tiled)) {
+    n <- a$nstrips; bnd <- seq(a$bbox[2], a$bbox[4], length.out = n + 1)
+    tiles <- lapply(seq_len(n), function(i) {
+      bb <- c(a$bbox[1], bnd[i], a$bbox[3], bnd[i + 1])
+      d <- dl_window(bb, file.path(DIR_CACHE, sprintf("massgis_%s_%d.tif", a$slug, i)), mpp); if (is.na(d)) NULL else terra::rast(d)[[1]]
+    })
+    tiles <- Filter(Negate(is.null), tiles); if (!length(tiles)) return(NULL)
+    poly <- terra::project(terra::as.polygons(terra::ext(a$bbox[1], a$bbox[3], a$bbox[2], a$bbox[4]), crs = "EPSG:4326"), "EPSG:26986")
+    tmpl <- terra::rast(terra::ext(poly), resolution = mpp, crs = "EPSG:26986")
+    dem <- do.call(terra::merge, lapply(tiles, function(t) terra::resample(t, tmpl, method = "bilinear")))
+    terra::cover(dem, terra::focal(dem, 5, "mean", na.rm = TRUE))   # fill thin seams between strips
+  } else {
+    d <- dl_window(a$bbox, file.path(DIR_CACHE, paste0("massgis_", a$slug, ".tif")), mpp); if (is.na(d)) NULL else terra::rast(d)[[1]]
+  }
+}
+
+render_one <- function(ras, sub, e, file, w, h) {
   p <- ggplot() + annotation_raster(ras, e[1], e[2], e[3], e[4], interpolate = TRUE) +
     coord_sf(crs = st_crs(CRS_MA), xlim = c(e[1], e[2]), ylim = c(e[3], e[4]), datum = NA, expand = FALSE) +
     labs(subtitle = sub) + theme_quabbin() +
     theme(axis.text = element_blank(), axis.title = element_blank(), panel.grid = element_blank(),
-          plot.subtitle = element_text(face = "bold", size = 11), panel.border = element_rect(colour = "#888888", fill = NA, linewidth = 0.5))
+          plot.subtitle = element_text(face = "bold", size = 10.5), panel.border = element_rect(colour = "#888888", fill = NA, linewidth = 0.5))
   ggsave(file, p, width = w, height = h, dpi = 150, bg = "white"); file
 }
-stitch_row <- function(pngs, out, res = 150, pw = 6, ph = 6.7, title = NULL) {
+stitch_row <- function(pngs, out, pw, ph, title, res = 150) {
   imgs <- lapply(pngs, png::readPNG)
-  grDevices::png(out, width = pw * length(imgs) * res, height = ph * res, res = res); grid::grid.newpage()
-  if (!is.null(title)) grid::grid.text(title, y = grid::unit(1, "npc") - grid::unit(3, "mm"), vjust = 1, gp = grid::gpar(fontface = "bold", fontsize = 15))
-  grid::pushViewport(grid::viewport(y = 0, height = grid::unit(0.94, "npc"), just = "bottom", layout = grid::grid.layout(1, length(imgs))))
-  for (i in seq_along(imgs)) { grid::pushViewport(grid::viewport(layout.pos.row = 1, layout.pos.col = i)); grid::grid.raster(imgs[[i]], name = paste0("im", i)); grid::popViewport() }
+  grDevices::png(out, width = pw * length(imgs) * res, height = (ph + 0.3) * res, res = res); grid::grid.newpage()
+  grid::grid.text(title, y = grid::unit(1, "npc") - grid::unit(3, "mm"), vjust = 1, gp = grid::gpar(fontface = "bold", fontsize = 15))
+  grid::pushViewport(grid::viewport(y = 0, height = grid::unit(1, "npc") - grid::unit(8, "mm"), just = "bottom", layout = grid::grid.layout(1, length(imgs))))
+  for (i in seq_along(imgs)) { grid::pushViewport(grid::viewport(layout.pos.row = 1, layout.pos.col = i)); grid::grid.raster(imgs[[i]]); grid::popViewport() }
   grDevices::dev.off(); out
 }
 ground_raster <- function(bbox, dem) {
@@ -79,62 +94,73 @@ ground_raster <- function(bbox, dem) {
   topo <- terra::project(terra::crop(terra::rast(TOPO_1893), terra::project(bb, terra::crs(terra::rast(TOPO_1893)))), "EPSG:26986", method = "bilinear")
   to_raster(terra::resample(topo, dem, method = "bilinear"))
 }
-# write an RGBA web overlay (4326) + return Leaflet bounds; alpha layer is 0/255
-write_overlay <- function(R, G, B, A, slug, maxdim = 1100) {
+write_overlay <- function(R, G, B, A, slug, maxdim) {
   rgba <- terra::project(c(R, G, B, A), "EPSG:4326")
   f <- max(1, round(max(terra::ncol(rgba), terra::nrow(rgba)) / maxdim)); if (f > 1) rgba <- terra::aggregate(rgba, f, fun = "mean", na.rm = TRUE)
   rgba <- terra::ifel(is.na(rgba), 0, rgba)
-  out <- file.path(DIR_WEB, paste0(slug, ".png"))
-  terra::writeRaster(rgba, out, datatype = "INT1U", overwrite = TRUE, NAflag = NA)
+  terra::writeRaster(rgba, file.path(DIR_WEB, paste0(slug, ".png")), datatype = "INT1U", overwrite = TRUE, NAflag = NA)
   unlink(list.files(DIR_WEB, pattern = "\\.aux\\.xml$", full.names = TRUE))
-  e <- terra::ext(rgba); c(e[3], e[1], e[4], e[2])  # ymin,xmin,ymax,xmax
+  e <- terra::ext(rgba); c(e[3], e[1], e[4], e[2])
 }
 
 AREAS <- list(
-  list(slug = "prescott",  bbox = c(-72.336, 42.4255, -72.320, 42.4375), label = "Prescott Peninsula (north)", web = TRUE),
-  list(slug = "dana",      bbox = c(-72.2925, 42.4262, -72.2765, 42.4368), label = "Dana Common",              web = TRUE),
-  list(slug = "enfield",   bbox = c(-72.346, 42.305, -72.324, 42.322),   label = "Enfield (Winsor Dam)",       web = TRUE),
-  # Greenwich's center is entirely under water now — a static "what drowned" panel only.
-  list(slug = "greenwich", bbox = c(-72.307, 42.351, -72.287, 42.368),   label = "Greenwich (village site, now submerged)", web = FALSE)
+  list(slug = "dana",      bbox = c(-72.2925, 42.4262, -72.2765, 42.4368), label = "Dana Common",        web = TRUE),
+  list(slug = "enfield",   bbox = c(-72.346, 42.305, -72.324, 42.322),    label = "Enfield (Winsor Dam)", web = TRUE),
+  list(slug = "greenwich", bbox = c(-72.307, 42.351, -72.287, 42.368),    label = "Greenwich (village site, now submerged)", web = FALSE),
+  # The Prescott Peninsula runs ~12 km N-S; a single export exceeds the server's
+  # ~4 Mpx cap, so mosaic three ~2 m strips into one DEM for full coverage.
+  list(slug = "prescott",  bbox = c(-72.362, 42.350, -72.318, 42.458),    label = "Prescott Peninsula",  web = TRUE, tiled = TRUE, nstrips = 3, mpp = 2)
 )
 
-manifest <- list()
 for (a in AREAS) {
-  tif <- fetch_massgis(a$bbox, file.path(DIR_CACHE, paste0("massgis_", a$slug, ".tif")))
-  if (is.na(tif)) { msg("MassGIS unavailable for %s; skipping", a$slug); next }
-  dem <- terra::rast(tif)[[1]]; demS <- terra::focal(dem, w = 3, fun = "mean", na.rm = TRUE)
+  fig <- file.path(DIR_OUTPUT, paste0("24_", a$slug, "_survey.png"))
+  ovl <- file.path(DIR_WEB, paste0("imprint_", a$slug, ".png"))
+  if (file.exists(fig) && (!isTRUE(a$web) || file.exists(ovl))) { msg("imprints: %s cached, skipping", a$slug); next }
+
+  dem <- fetch_dem(a); if (is.null(dem)) { msg("MassGIS unavailable for %s; skipping", a$slug); next }
+  mpp <- if (is.null(a$mpp)) 1 else a$mpp
+  demS <- terra::focal(dem, w = 3, fun = "mean", na.rm = TRUE)
   water <- dem <= WATER_LVL; e <- terra::ext(dem)
   slope <- terra::terrain(demS, "slope", unit = "degrees")
   L <- lrm(demS, K = 25); span <- as.numeric(stats::quantile(abs(terra::values(L)), 0.985, na.rm = TRUE))
   g <- relief_grey(demS, L, span)
-  roads <- extract_lines(-L, 0.22, slope, 12, water, 80, 5, 40)
-  walls <- extract_lines( L, 0.16, slope, 13, water, 70, 5, 35)
+  Nr <- max(20, round(60 / mpp^1.5))   # min component size scales with pixel size
+  roads <- extract_lines(-L, 0.22, slope, 12, water, Nr, 5, 40)
+  walls <- extract_lines( L, 0.16, slope, 13, water, round(Nr * 0.9), 5, 35)
 
-  # ---- static survey figure: 1893 ground-truth | relief ----
   base <- terra::clamp(g, 0, 1) * 255
-  ras_relief <- to_raster(c(terra::ifel(water, wc[1], base), terra::ifel(water, wc[2], base), terra::ifel(water, wc[3], base)))
-  g93 <- ground_raster(a$bbox, dem)
-  tmpL <- file.path(tempdir(), paste0(a$slug, "_lrm.png")); render_one(ras_relief, sprintf("Today — %s, MassGIS 1 m LiDAR relief", a$label), e, tmpL)
-  pngs <- tmpL
-  if (!is.null(g93)) { tmp93 <- file.path(tempdir(), paste0(a$slug, "_93.png")); render_one(g93, "1893 survey (ground-truth)", e, tmp93); pngs <- c(tmp93, tmpL) }
-  stitch_row(pngs, file.path(DIR_OUTPUT, paste0("24_", a$slug, "_survey.png")), title = sprintf("%s — what survives in the ground", a$label))
+  ras_rel <- to_raster(c(terra::ifel(water, wc[1], base), terra::ifel(water, wc[2], base), terra::ifel(water, wc[3], base)))
+  rc <- grDevices::col2rgb("#ff7b00"); wl <- grDevices::col2rgb("#1fb6a6")
+  tRr <- terra::ifel(!is.na(walls), wl[1], base); tGg <- terra::ifel(!is.na(walls), wl[2], base); tBb <- terra::ifel(!is.na(walls), wl[3], base)
+  tRr <- terra::ifel(!is.na(roads), rc[1], tRr); tGg <- terra::ifel(!is.na(roads), rc[2], tGg); tBb <- terra::ifel(!is.na(roads), rc[3], tBb)
+  ras_tr <- to_raster(c(terra::ifel(water, wc[1], tRr), terra::ifel(water, wc[2], tGg), terra::ifel(water, wc[3], tBb)))
 
-  # ---- web overlays: relief (transparent over water) + traces (land areas only) ----
+  # ---- static survey figure: 1893 | relief | traced ----
+  asp <- terra::nrow(dem) / terra::ncol(dem); pw <- 4.2; ph <- max(4.4, min(14, pw * asp))
+  g93 <- ground_raster(a$bbox, dem)
+  tR <- tempfile(fileext = ".png"); tT <- tempfile(fileext = ".png")
+  render_one(ras_rel, sprintf("Today - %s, MassGIS LiDAR relief", a$label), e, tR, pw, ph)
+  render_one(ras_tr, "Auto-traced: roads/paths (orange), walls (teal)", e, tT, pw, ph)
+  pngs <- c(tR, tT)
+  if (!is.null(g93)) { t9 <- tempfile(fileext = ".png"); render_one(g93, "1893 survey (ground-truth)", e, t9, pw, ph); pngs <- c(t9, tR, tT) }
+  stitch_row(pngs, fig, pw, ph, sprintf("%s - what survives in the ground", a$label))
+
+  # ---- web overlays ----
   if (isTRUE(a$web)) {
+    md <- if (isTRUE(a$tiled)) 2200 else 1100
     A <- terra::ifel(water | is.na(demS), 0, 235)
-    bounds <- write_overlay(base, base, base, A, paste0("imprint_", a$slug))
-    rc <- grDevices::col2rgb("#ff7b00"); wl <- grDevices::col2rgb("#1fb6a6")
+    bounds <- write_overlay(base, base, base, A, paste0("imprint_", a$slug), md)
     hasline <- (!is.na(roads)) | (!is.na(walls))
-    tR <- terra::ifel(!is.na(walls), wl[1], 0); tG <- terra::ifel(!is.na(walls), wl[2], 0); tB <- terra::ifel(!is.na(walls), wl[3], 0)
-    tR <- terra::ifel(!is.na(roads), rc[1], tR); tG <- terra::ifel(!is.na(roads), rc[2], tG); tB <- terra::ifel(!is.na(roads), rc[3], tB)
-    tA <- terra::ifel(hasline, 255, 0)
-    write_overlay(tR, tG, tB, tA, paste0("imprint_", a$slug, "_trace"))
-    manifest[[length(manifest) + 1]] <- sprintf('  {"slug":"%s","label":"%s","bounds":[[%.6f,%.6f],[%.6f,%.6f]]}',
-                                                a$slug, a$label, bounds[1], bounds[2], bounds[3], bounds[4])
+    oR <- terra::ifel(!is.na(walls), wl[1], 0); oG <- terra::ifel(!is.na(walls), wl[2], 0); oB <- terra::ifel(!is.na(walls), wl[3], 0)
+    oR <- terra::ifel(!is.na(roads), rc[1], oR); oG <- terra::ifel(!is.na(roads), rc[2], oG); oB <- terra::ifel(!is.na(roads), rc[3], oB)
+    write_overlay(oR, oG, oB, terra::ifel(hasline, 255, 0), paste0("imprint_", a$slug, "_trace"), md)
+    writeLines(sprintf('  {"slug":"%s","label":"%s","bounds":[[%.6f,%.6f],[%.6f,%.6f]]}',
+                       a$slug, a$label, bounds[1], bounds[2], bounds[3], bounds[4]), file.path(DIR_WEB, paste0(".bounds_", a$slug)))
     msg("imprints: %s done (relief + trace overlays, survey figure)", a$slug)
-  } else {
-    msg("imprints: %s done (static survey figure only — drowned)", a$slug)
-  }
+  } else msg("imprints: %s done (static survey figure only)", a$slug)
 }
-writeLines(c("[", paste(manifest, collapse = ",\n"), "]"), file.path(DIR_WEB, "imprints.json"))
-msg("imprints stage complete; wrote %d areas to map/data/imprints.json", length(manifest))
+
+# assemble the explorer manifest from each web area's bounds sidecar (in AREAS order)
+lines <- unlist(lapply(AREAS, function(a) if (isTRUE(a$web)) { bf <- file.path(DIR_WEB, paste0(".bounds_", a$slug)); if (file.exists(bf)) readLines(bf) }))
+writeLines(c("[", paste(lines, collapse = ",\n"), "]"), file.path(DIR_WEB, "imprints.json"))
+msg("imprints stage complete; %d areas in map/data/imprints.json", length(lines))

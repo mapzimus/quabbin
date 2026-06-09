@@ -33,7 +33,7 @@ present-day map in which their land has been absorbed by the surrounding towns.
 | 14 | `14_dana_lidar.png` | Dana Common in 1 m LiDAR (surviving town site) | USGS 3DEP LiDAR |
 | 15 | `15_prescott_lidar.png` | The Prescott Peninsula in 1 m LiDAR | USGS 3DEP LiDAR |
 | 16 | `16_roads.png` | The valley's 1893 road network, with the reservoir overlaid | 1893 USGS quad |
-| 17 | `24_prescott_survey.png` | Prescott Peninsula: the 1893 survey vs. the LiDAR imprints surviving today | MassGIS 1 m LiDAR + 1893 quad |
+| 17 | `24_prescott_survey.png` | The whole Prescott Peninsula: 1893 survey vs. the LiDAR imprints surviving today | MassGIS LiDAR (3-tile mosaic) + 1893 quad |
 | 18 | `24_enfield_survey.png` | Enfield (Winsor Dam): surviving roads on the dry south vs. the drowned center | MassGIS 1 m LiDAR + 1893 quad |
 | 19 | `24_dana_survey.png` | Dana Common: the surviving common/ridge vs. the drowned village | MassGIS 1 m LiDAR + 1893 quad |
 | 20 | `24_greenwich_survey.png` | Greenwich: the 1893 village vs. its site, now entirely under water | MassGIS 1 m LiDAR + 1893 quad |
@@ -65,9 +65,13 @@ Rscript quabbin/run_all.R
 ```
 
 Downloads are cached under `quabbin/data/cache/` (git-ignored), so the first
-run takes a few minutes and every run after that is ~90 seconds. The twenty
-figures and the GIF land in `quabbin/output/`; the web-map GeoJSON, the 1893
-overlay, and the LiDAR imprint overlays land in `quabbin/map/data/`. (The GIF needs
+run takes a few minutes and every run after that is ~90 seconds — except the
+imprint survey (stage 14), which mosaics the Prescott Peninsula and is
+cache-guarded: its first build takes several minutes, then later runs skip any
+area whose `output/24_*_survey.png` already exists (delete one to force a
+rebuild). The twenty figures and the GIF land in `quabbin/output/`; the web-map
+GeoJSON, the 1893 overlay, and the LiDAR imprint overlays land in
+`quabbin/map/data/`. (The GIF needs
 ImageMagick — `apt-get install imagemagick`; without it the pipeline still
 produces the panel `09`.)
 
@@ -194,8 +198,12 @@ never breaks the run — it degrades to a documented fallback instead.
   well documented (J.R. Greene's *Atlas of the Quabbin Valley*; the Swift River Valley
   Historical Society) and LiDAR for New England relict landscapes is proven (UConn's
   Ouimet Lab; Johnson & Ouimet 2014), but not combined into a LiDAR imprint survey of
-  the four towns. Exported as static survey figures (`output/24_*`) and as web overlays
-  (relief + traces, transparent over water) with bounds in `map/data/imprints.json`.
+  the four towns. The Prescott Peninsula runs ~12 km — beyond the server's single-export
+  cap — so it is mosaicked from three ~2 m strips into one DEM for full-length coverage;
+  the stage is cache-guarded (skips any area whose survey figure already exists), so only
+  the first build pays the render cost. Exported as static survey figures (`output/24_*`)
+  and as web overlays (relief + traces, transparent over water) with bounds in
+  `map/data/imprints.json`.
 - **Interactive imprint explorer** — Leaflet (vendored locally, no CDN dependency),
   rebuilt mobile-first: a full-screen map, bottom-sheet **Layers** control, big touch
   targets, and a full-width pool slider. It serves the imprint relief + trace overlays

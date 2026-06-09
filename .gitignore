@@ -9,4 +9,7 @@ output/floodfill_frames/
 .RData
 .Rproj.user/
 
+# imprint-stage cache-guard sidecars (regenerated; the committed manifest is map/data/imprints.json)
+map/data/.bounds_*
+
 # Keep bundled source data (data/*.csv) and rendered output/ committed.
