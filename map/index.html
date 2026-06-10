@@ -117,9 +117,9 @@
 <div id="loading" class="card" role="status" aria-live="polite"><span class="spin" aria-hidden="true"></span><span>loading imagery…</span></div>
 
 <div id="about" class="card">
-  <h1>The lost towns, written in the ground</h1>
+  <h1>The lost towns of the Swift River Valley</h1>
   <p>Between 1938 and 1946 the Swift River Valley was flooded for the Quabbin Reservoir, erasing four towns — <b>Dana, Enfield, Greenwich, Prescott</b>. On the land that never went under, their <b>street plans, house-lot outlines and cellar holes</b> are still imprinted in the earth.</p>
-  <p>Turn on <b>Bare-earth relief</b> and zoom in: the grey is <b>MassGIS 1 m bare-earth LiDAR</b> — the ground with the forest digitally removed — and the old roads, walls and foundations read straight off it. Check what you find against the <b>1893 survey</b>, or raise the <b>pool</b> to see what drowned.</p>
+  <p>Turn on <b>LiDAR relief</b> and zoom in: the grey is <b>MassGIS 1 m bare-earth LiDAR</b> — the ground with the forest digitally removed — and the old roads, walls and foundations read straight off it. Check what you find against the <b>1893 survey</b>, or raise the <b>pool</b> to see what drowned.</p>
   <div class="links">
     <a href="../../quabbin.html">← The full study</a>
     <a href="https://github.com/mapzimus/maxwellhowegis/tree/main/quabbin" target="_blank" rel="noopener">R code ↗</a>
@@ -134,10 +134,10 @@
   </div>
   <div class="grp">
     <h2>LiDAR imprints</h2>
-    <label class="row"><input type="checkbox" id="lRelief"><span class="sw" style="background:#9a9a9a"></span><span class="lab">Bare-earth relief (whole reservoir)</span></label>
-    <div class="sub" id="reliefSub"><input id="reliefOpacity" type="range" min="0" max="100" value="96" aria-label="Bare-earth relief opacity"></div>
+    <label class="row"><input type="checkbox" id="lRelief"><span class="sw" style="background:#9a9a9a"></span><span class="lab">LiDAR relief (whole reservoir)</span></label>
+    <div class="sub" id="reliefSub"><input id="reliefOpacity" type="range" min="0" max="100" value="96" aria-label="LiDAR relief opacity"></div>
     <label class="row"><input type="checkbox" id="lTrace"><span class="sw" style="background:linear-gradient(90deg,var(--road) 50%,var(--wall) 50%)"></span><span class="lab">Traced lines</span></label>
-    <div class="hint">Turn on Bare-earth relief and zoom in: the grey is bare-earth LiDAR — hunt the old streets, house-lot outlines and cellar holes. Traced lines are auto-detected candidates: <b style="color:var(--road)">roads &amp; paths</b>, <b style="color:var(--wall)">stone walls</b>.</div>
+    <div class="hint">Turn on LiDAR relief and zoom in: the grey is bare-earth LiDAR — hunt the old streets, house-lot outlines and cellar holes. Traced lines are auto-detected candidates: <b style="color:var(--road)">roads &amp; paths</b>, <b style="color:var(--wall)">stone walls</b>.</div>
     <div class="jump" id="jump"></div>
   </div>
   <div class="grp">
@@ -199,7 +199,7 @@ function trackLoad(ov){ let done=false, counted=false;
   ov.on("remove",()=>{ if(counted){ counted=false; pendImg(-1); } });      // toggled off mid-load
   return ov; }
 
-// ---- Bare-earth relief opacity: one slider drives every overlay in the group ----
+// ---- LiDAR relief opacity: one slider drives every overlay in the group ----
 const ghostOp = document.getElementById("reliefOpacity");
 ghostOp.addEventListener("input",()=>{ const v=+ghostOp.value/100; reliefGroup.eachLayer(l=>l.setOpacity(v)); });
 
@@ -235,7 +235,7 @@ fetch(DATA+"preflood.json").then(r=>r.ok?r.json():null).then(meta=>{ if(!meta) r
   op.addEventListener("input",()=>histOv.setOpacity(+op.value/100));
 }).catch(()=>{});
 
-// ---- Bare-earth relief: full-reservoir LiDAR coverage (2 m tiles + 1 m village sites) ----
+// ---- LiDAR relief: full-reservoir LiDAR coverage (2 m tiles + 1 m village sites) ----
 fetch(DATA+"reservoir_ghost.json").then(r=>r.ok?r.json():null).then(list=>{
   if(!list) return;
   list.forEach(s=> reliefGroup.addLayer(trackLoad(L.imageOverlay(DATA+"imprintg_"+s.slug+".png", s.bounds, {opacity:+ghostOp.value/100, pane:"lidar"}))));
