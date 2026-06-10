@@ -1,6 +1,7 @@
 # 05_floodfill.R ----------------------------------------------------------
-# Animate the reservoir filling. Raise the pool level up the DEM in stages,
-# carve the water at each level, and render:
+# Animate the reservoir filling. Raise the pool in equal-area stages over a
+# schematic synthetic bed (the drowned valley floor isn't in modern DEMs --
+# see below), carve the water at each stage, and render:
 #   - output/floodfill_frames/f_##.png  (frames)
 #   - output/quabbin_floodfill.gif      (animation, via ImageMagick)
 #   - output/09_floodfill.png           (small-multiples panel)

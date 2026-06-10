@@ -32,7 +32,6 @@ infra_ma    <- st_transform(infra_sf, CRS_MA)
 aqueduct_ma <- st_transform(aqueduct_ll, CRS_MA)
 route_df    <- as.data.frame(st_coordinates(aqueduct_ma))[, 1:2]; names(route_df) <- c("x", "y")
 boston_ma   <- infra_ma[infra_ma$type == "city", ]
-dams_ma     <- infra_ma[infra_ma$type == "dam", ]
 
 # label coordinates (geom_text is more robust than geom_sf_text under datum=NA)
 lab_df     <- cbind(as.data.frame(st_coordinates(infra_ma)), infra_ma[, c("name", "type")] |> st_drop_geometry())

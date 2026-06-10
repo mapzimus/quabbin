@@ -12,47 +12,10 @@
 # -------------------------------------------------------------------------
 if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() else file.path(getwd(), "quabbin")
 if (!exists("POOL_M")) source(file.path(QB_DIR, "R", "00_setup.R"))
+source(file.path(QB_DIR, "R", "lidar_utils.R"))
 DIR_WEB <- file.path(QB_DIR, "map", "data"); dir.create(DIR_WEB, recursive = TRUE, showWarnings = FALSE)
 TOPO_1893 <- file.path(DIR_CACHE, "preflood_belchertown_1893.tif")
-MG <- "https://arcgisserver.digital.mass.gov/arcgisserver/rest/services/LiDAR/DEM_lidar_2013to2021_32bitFloat/ImageServer/exportImage"
-WATER_LVL <- POOL_M + 0.5; wc <- grDevices::col2rgb(WATER_FILL)[, 1]
 
-to_raster <- function(rgb3) { arr <- terra::as.array(rgb3) / 255; arr[is.na(arr)] <- 1; grDevices::as.raster(arr) }
-lrm <- function(dem, K = 25) dem - terra::focal(dem, w = K, fun = "mean", na.rm = TRUE)
-mdow <- function(dem, angle = 35) {
-  slp <- terra::terrain(dem, "slope", unit = "radians"); asp <- terra::terrain(dem, "aspect", unit = "radians")
-  hs <- Reduce(`+`, lapply(seq(0, 315, 45), function(a) terra::shade(slp, asp, angle = angle, direction = a))) / 8
-  terra::clamp((hs - 0.5) * 1.6 + 0.5, 0, 1)
-}
-relief_grey <- function(demS, L, span) {
-  hs <- mdow(demS); neg <- terra::clamp(-L / span, 0, 1); pos <- terra::clamp(L / span, 0, 1)
-  terra::clamp(hs * (1 - 0.5 * neg) + 0.32 * pos * (1 - hs), 0, 1)
-}
-extract_lines <- function(signed, thr, slope, slopemax, water, Nmin, Emin, Lmin) {
-  mask <- terra::ifel(signed > thr & slope < slopemax & !water, 1, NA)
-  p <- terra::patches(mask, directions = 8, zeroAsNA = TRUE)
-  v <- terra::values(p)[, 1]; cells <- which(!is.na(v)); if (!length(cells)) return(p * NA)
-  ids <- v[cells]; xy <- terra::xyFromCell(p, cells); spl <- split(as.data.frame(xy), ids)
-  sizes <- vapply(spl, nrow, integer(1))
-  st <- lapply(spl, function(d) { if (nrow(d) < 8) return(c(0, 0)); ev <- eigen(stats::cov(d), only.values = TRUE)$values
-    c(sqrt(max(ev) / max(min(ev), 1e-4)), sqrt(max(ev)) * 3.5) })
-  el <- vapply(st, `[`, numeric(1), 1); ln <- vapply(st, `[`, numeric(1), 2)
-  keep <- as.numeric(names(sizes)[sizes >= Nmin & el >= Emin & ln >= Lmin])
-  if (length(keep)) terra::subst(p, keep, 1, others = NA) else p * NA
-}
-
-dl_window <- function(bbox, dst, mpp) {
-  if (!file.exists(dst) || file.size(dst) < 1e5) {
-    latm <- mean(c(bbox[2], bbox[4]))
-    w <- round((bbox[3] - bbox[1]) * cos(latm * pi / 180) * 111320 / mpp); h <- round((bbox[4] - bbox[2]) * 111320 / mpp)
-    if (w * h > 4.0e6) { f <- sqrt(4.0e6 / (w * h)); w <- floor(w * f); h <- floor(h * f) }
-    url <- sprintf("%s?bbox=%f,%f,%f,%f&bboxSR=4326&size=%d,%d&imageSR=26986&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image",
-                   MG, bbox[1], bbox[2], bbox[3], bbox[4], w, h)
-    for (k in 1:6) { ok <- tryCatch({ download.file(url, dst, mode = "wb", quiet = TRUE); file.exists(dst) && file.size(dst) > 1e5 }, error = function(e) FALSE)
-      if (ok) break; Sys.sleep(2 * k) }   # MassGIS throws intermittent 500s; retry resolves them
-  }
-  if (file.exists(dst) && file.size(dst) > 1e5) dst else NA_character_
-}
 # single-window DEM (1 m) or a multi-strip mosaic for long areas (Prescott Peninsula)
 fetch_dem <- function(a) {
   mpp <- if (is.null(a$mpp)) 1 else a$mpp
@@ -60,7 +23,7 @@ fetch_dem <- function(a) {
     n <- a$nstrips; bnd <- seq(a$bbox[2], a$bbox[4], length.out = n + 1)
     tiles <- lapply(seq_len(n), function(i) {
       bb <- c(a$bbox[1], bnd[i], a$bbox[3], bnd[i + 1])
-      d <- dl_window(bb, file.path(DIR_CACHE, sprintf("massgis_%s_%d.tif", a$slug, i)), mpp); if (is.na(d)) NULL else terra::rast(d)[[1]]
+      d <- massgis_export(bb, file.path(DIR_CACHE, sprintf("massgis_%s_%d.tif", a$slug, i)), mpp); if (is.na(d)) NULL else terra::rast(d)[[1]]
     })
     tiles <- Filter(Negate(is.null), tiles); if (!length(tiles)) return(NULL)
     poly <- terra::project(terra::as.polygons(terra::ext(a$bbox[1], a$bbox[3], a$bbox[2], a$bbox[4]), crs = "EPSG:4326"), "EPSG:26986")
@@ -68,26 +31,10 @@ fetch_dem <- function(a) {
     dem <- do.call(terra::merge, lapply(tiles, function(t) terra::resample(t, tmpl, method = "bilinear")))
     terra::cover(dem, terra::focal(dem, 5, "mean", na.rm = TRUE))   # fill thin seams between strips
   } else {
-    d <- dl_window(a$bbox, file.path(DIR_CACHE, paste0("massgis_", a$slug, ".tif")), mpp); if (is.na(d)) NULL else terra::rast(d)[[1]]
+    d <- massgis_export(a$bbox, file.path(DIR_CACHE, paste0("massgis_", a$slug, ".tif")), mpp); if (is.na(d)) NULL else terra::rast(d)[[1]]
   }
 }
 
-render_one <- function(ras, sub, e, file, w, h) {
-  p <- ggplot() + annotation_raster(ras, e[1], e[2], e[3], e[4], interpolate = TRUE) +
-    coord_sf(crs = st_crs(CRS_MA), xlim = c(e[1], e[2]), ylim = c(e[3], e[4]), datum = NA, expand = FALSE) +
-    labs(subtitle = sub) + theme_quabbin() +
-    theme(axis.text = element_blank(), axis.title = element_blank(), panel.grid = element_blank(),
-          plot.subtitle = element_text(face = "bold", size = 10.5), panel.border = element_rect(colour = "#888888", fill = NA, linewidth = 0.5))
-  ggsave(file, p, width = w, height = h, dpi = 150, bg = "white"); file
-}
-stitch_row <- function(pngs, out, pw, ph, title, res = 150) {
-  imgs <- lapply(pngs, png::readPNG)
-  grDevices::png(out, width = pw * length(imgs) * res, height = (ph + 0.3) * res, res = res); grid::grid.newpage()
-  grid::grid.text(title, y = grid::unit(1, "npc") - grid::unit(3, "mm"), vjust = 1, gp = grid::gpar(fontface = "bold", fontsize = 15))
-  grid::pushViewport(grid::viewport(y = 0, height = grid::unit(1, "npc") - grid::unit(8, "mm"), just = "bottom", layout = grid::grid.layout(1, length(imgs))))
-  for (i in seq_along(imgs)) { grid::pushViewport(grid::viewport(layout.pos.row = 1, layout.pos.col = i)); grid::grid.raster(imgs[[i]]); grid::popViewport() }
-  grDevices::dev.off(); out
-}
 ground_raster <- function(bbox, dem) {
   if (!file.exists(TOPO_1893)) return(NULL)
   bb <- terra::as.polygons(terra::ext(bbox[1], bbox[3], bbox[2], bbox[4]), crs = "EPSG:4326")
@@ -162,7 +109,17 @@ for (a in AREAS) {
   }
 }
 
-# assemble the explorer manifest from each web area's bounds sidecar (in AREAS order)
+# assemble the explorer manifest from each web area's bounds sidecar (in AREAS order).
+# The sidecars are git-ignored scratch: on a fresh clone the committed survey figures
+# make every area cache-skip, so no sidecars exist -- in that case keep the committed
+# manifest instead of clobbering it. Only write when there are actual entries.
 lines <- unlist(lapply(AREAS, function(a) if (isTRUE(a$web)) { bf <- file.path(DIR_WEB, paste0(".bounds_", a$slug)); if (file.exists(bf)) readLines(bf) }))
-writeLines(c("[", paste(lines, collapse = ",\n"), "]"), file.path(DIR_WEB, "imprints.json"))
-msg("imprints stage complete; %d areas in map/data/imprints.json", length(lines))
+manifest <- file.path(DIR_WEB, "imprints.json")
+if (length(lines)) {
+  writeLines(c("[", paste(lines, collapse = ",\n"), "]"), manifest)
+  msg("imprints stage complete; %d areas in map/data/imprints.json", length(lines))
+} else if (file.exists(manifest)) {
+  msg("imprints stage complete; no bounds sidecars (all areas cache-skipped) - keeping existing map/data/imprints.json")
+} else {
+  msg("imprints stage complete; no areas exported and no prior manifest - map/data/imprints.json not written")
+}

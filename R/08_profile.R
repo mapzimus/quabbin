@@ -32,7 +32,6 @@ rr <- rle(prof$inside); prof$run <- rep(seq_along(rr$lengths), rr$lengths)  # co
 under   <- prof[prof$inside & prof$elev_ft <= POOL_FT, ]
 ins     <- prof$elev_ft[prof$inside]
 depth   <- round(POOL_FT - min(ins))
-deep_mi <- prof$mi[prof$inside][which.min(ins)]
 
 # Locator inset
 tline <- st_sfc(st_linestring(cbind(range(xs), rep(y0, 2))), crs = CRS_MA)

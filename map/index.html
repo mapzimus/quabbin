@@ -27,6 +27,15 @@
            font-weight:600;font-size:13px;color:#333;cursor:pointer;display:flex;align-items:center;gap:7px}
   .iconbtn:hover{border-color:var(--water);color:var(--water)}
   .iconbtn.on{background:var(--water);color:#fff;border-color:var(--water)}
+  button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+
+  /* overlay-image loading chip */
+  #loading{position:absolute;z-index:1000;top:64px;left:50%;transform:translateX(-50%);display:none;align-items:center;gap:8px;
+           padding:7px 12px;font-size:11.5px;font-weight:600;color:#555;pointer-events:none;white-space:nowrap}
+  #loading.show{display:flex}
+  #loading .spin{width:11px;height:11px;border-radius:50%;border:2px solid #ccd9e6;border-top-color:var(--water);flex:none}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion: no-preference){ #loading .spin{animation:spin .8s linear infinite} }
 
   /* about sheet */
   #about{position:absolute;z-index:1001;top:64px;left:10px;max-width:340px;padding:15px 17px;display:none}
@@ -50,6 +59,7 @@
   .row .lab{flex:1}
   .sub{padding:2px 4px 8px 31px;display:none}
   .sub input[type=range]{width:100%;accent-color:#8a5a2b}
+  #reliefOpacity{accent-color:#8a8a8a}
   .jump{display:flex;flex-wrap:wrap;gap:6px;padding:4px}
   .jump button{flex:1 1 calc(50% - 6px);min-height:var(--tap);border:1px solid var(--br);background:#fff;border-radius:9px;
                font-size:12.5px;font-weight:600;color:#333;cursor:pointer;padding:6px 8px}
@@ -62,6 +72,7 @@
   #flood .lab{font-size:11px;color:#666;white-space:nowrap}
   #flood input[type=range]{flex:1;accent-color:var(--water);height:var(--tap)}
   #flood .read{font-weight:700;font-size:12.5px;color:var(--line);white-space:nowrap;min-width:118px;text-align:right}
+  #flood .read small{display:block;font-weight:500;font-size:9px;letter-spacing:.05em;color:#9a9a9a;text-transform:uppercase}
   #flood button{flex:none;height:36px;border:0;border-radius:9px;background:var(--water);color:#fff;font-weight:600;font-size:12.5px;padding:0 14px;cursor:pointer}
   #flood button:hover{background:#21588f}
 
@@ -75,9 +86,10 @@
   @media(max-width:640px){
     #title small{display:none}
     #about{top:60px;left:10px;right:10px;max-width:none}
+    #loading{top:60px}
     /* controls become a bottom sheet */
     #panel{top:auto;bottom:0;right:0;left:0;width:auto;max-height:72vh;border-radius:16px 16px 0 0;
-           padding:8px 8px calc(8px + env(safe-area-inset-bottom));transform:translateY(100%);transition:transform .25s ease;display:block}
+           padding:8px 8px calc(8px + env(safe-area-inset-bottom));transform:translateY(100%);display:block}
     #panel.show{transform:translateY(0)}
     #panel::before{content:"";display:block;width:38px;height:4px;border-radius:3px;background:#cfcfcf;margin:2px auto 8px}
     #flood{bottom:10px;width:calc(100% - 16px);padding:8px 10px;gap:8px}
@@ -85,6 +97,10 @@
     #flood .read{min-width:auto;font-size:12px}
     #flood.dim{opacity:0;pointer-events:none}
     .leaflet-control-zoom{display:none}
+    .leaflet-control-scale{display:none}   /* keep the corner clear of the full-width flood bar */
+  }
+  @media (max-width:640px) and (prefers-reduced-motion: no-preference){
+    #panel{transition:transform .25s ease}
   }
 </style>
 </head>
@@ -94,14 +110,16 @@
 <div id="bar">
   <div id="title" class="card">Quabbin · lost towns<small>LiDAR imprint explorer</small></div>
   <div class="spacer"></div>
-  <button id="aboutBtn" class="iconbtn" aria-label="About">ⓘ <span class="t">About</span></button>
-  <button id="layersBtn" class="iconbtn" aria-label="Layers">☰ <span class="t">Layers</span></button>
+  <button id="aboutBtn" class="iconbtn" aria-label="About" aria-pressed="false">ⓘ <span class="t">About</span></button>
+  <button id="layersBtn" class="iconbtn" aria-label="Layers" aria-pressed="false">☰ <span class="t">Layers</span></button>
 </div>
+
+<div id="loading" class="card" role="status" aria-live="polite"><span class="spin" aria-hidden="true"></span><span>loading imagery…</span></div>
 
 <div id="about" class="card">
   <h1>The lost towns, written in the ground</h1>
-  <p>Between 1938 and 1946 the Swift River Valley was flooded for the Quabbin Reservoir, erasing four towns — <b>Dana, Enfield, Greenwich, Prescott</b>. On the land that never went under, the old <b>roads, cart paths and field walls</b> are still imprinted in the earth — and 1 m airborne <b>LiDAR</b> (bare-earth, forest digitally removed) reveals them.</p>
-  <p>Turn on <b>LiDAR imprints</b> and zoom in: the grey relief is the ground today. Hunt the faint lines — most are abandoned roads and stone walls. Toggle the <b>1893 survey</b> to check them, or raise the <b>pool</b> to see what drowned.</p>
+  <p>Between 1938 and 1946 the Swift River Valley was flooded for the Quabbin Reservoir, erasing four towns — <b>Dana, Enfield, Greenwich, Prescott</b>. On the land that never went under, their <b>street plans, house-lot outlines and cellar holes</b> are still imprinted in the earth.</p>
+  <p>Turn on <b>Ghost relief</b> and zoom in: the grey is <b>MassGIS 1 m bare-earth LiDAR</b> — the ground with the forest digitally removed — and the old roads, walls and foundations read straight off it. Check what you find against the <b>1893 survey</b>, or raise the <b>pool</b> to see what drowned.</p>
   <div class="links">
     <a href="../../quabbin.html">← The full study</a>
     <a href="https://github.com/mapzimus/maxwellhowegis/tree/main/quabbin" target="_blank" rel="noopener">R code ↗</a>
@@ -117,8 +135,9 @@
   <div class="grp">
     <h2>LiDAR imprints</h2>
     <label class="row"><input type="checkbox" id="lRelief"><span class="sw" style="background:#9a9a9a"></span><span class="lab">Ghost relief (whole reservoir)</span></label>
+    <div class="sub" id="reliefSub"><input id="reliefOpacity" type="range" min="0" max="100" value="96" aria-label="Ghost relief opacity"></div>
     <label class="row"><input type="checkbox" id="lTrace"><span class="sw" style="background:linear-gradient(90deg,var(--road) 50%,var(--wall) 50%)"></span><span class="lab">Traced lines</span></label>
-    <div class="hint">Turn on Ghost relief and zoom in: the grey is bare-earth LiDAR — hunt the old streets, house-lot outlines and cellar holes. Traced lines are auto-detected road/wall candidates.</div>
+    <div class="hint">Turn on Ghost relief and zoom in: the grey is bare-earth LiDAR — hunt the old streets, house-lot outlines and cellar holes. Traced lines are auto-detected candidates: <b style="color:var(--road)">roads &amp; paths</b>, <b style="color:var(--wall)">stone walls</b>.</div>
     <div class="jump" id="jump"></div>
   </div>
   <div class="grp">
@@ -131,12 +150,12 @@
   </div>
 </div>
 
-<div id="flood" class="card">
+<div id="flood" class="card" title="Pool stages are schematic (synthetic bathymetry), not surveyed">
   <span class="lab">valley</span>
-  <input id="slider" type="range" min="1" max="14" value="14" step="1" aria-label="Reservoir pool level">
+  <input id="slider" type="range" min="1" max="14" value="14" step="1" aria-label="Reservoir pool level (schematic stages)">
   <span class="lab">full</span>
-  <span class="read" id="readout">530 ft · 100%</span>
-  <button id="play">▶</button>
+  <span class="read"><span id="readout">530 ft · 100%</span><small>schematic stages</small></span>
+  <button id="play" aria-label="Play filling animation">▶</button>
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
@@ -144,6 +163,8 @@
 const DATA = "data/";
 const map = L.map("map", { zoomControl:true, minZoom:8, maxZoom:19, attributionControl:true }).setView([42.36,-72.33], 11);
 map.zoomControl.setPosition("topleft");
+L.control.scale({position:"bottomleft", metric:true, imperial:true}).addTo(map);
+map.attributionControl.addAttribution("LiDAR: MassGIS");
 
 // panes: hist < relief < trace < (vectors/markers default 400+)
 [["labels",450],["hist",350],["lidar",360],["trace",365]].forEach(([n,z])=>{
@@ -165,6 +186,22 @@ const fmt = n => n==null ? "—" : n.toLocaleString();
 const reliefGroup = L.layerGroup(), traceGroup = L.layerGroup();
 let floodFeatures=[], floodLayer=L.geoJSON(null,{style:styles.flood}).addTo(map);
 let histOv=null, townsLayer=null, aqueductGroup=null, watershedLayer=null;
+
+// ---- loading chip: overlay images are fetched lazily (Leaflet only sets img.src on first add
+//      to the map); count the ones in flight and show feedback while any are loading ----
+const loadingEl = document.getElementById("loading");
+let pendingImgs = 0;
+function pendImg(d){ pendingImgs=Math.max(0,pendingImgs+d); loadingEl.classList.toggle("show",pendingImgs>0); }
+function trackLoad(ov){ let done=false, counted=false;
+  const settle=()=>{ done=true; if(counted){ counted=false; pendImg(-1); } };
+  ov.on("load",settle); ov.on("error",settle);
+  ov.on("add",()=>{ if(!done&&!counted){ counted=true; pendImg(1); } });   // first add starts the fetch
+  ov.on("remove",()=>{ if(counted){ counted=false; pendImg(-1); } });      // toggled off mid-load
+  return ov; }
+
+// ---- Ghost relief opacity: one slider drives every overlay in the group ----
+const ghostOp = document.getElementById("reliefOpacity");
+ghostOp.addEventListener("input",()=>{ const v=+ghostOp.value/100; reliefGroup.eachLayer(l=>l.setOpacity(v)); });
 
 function townPopup(p){ return `<div class="pop"><b>${p.town}</b> <span class="muted">${p.county} County</span><br>
   Chartered <b>${p.incorporated}</b> · disincorporated <b>1938</b>
@@ -193,7 +230,7 @@ Promise.all(["towns","reservoir","watershed","floodstages","aqueduct","infrastru
 
 // ---- 1893 overlay ----
 fetch(DATA+"preflood.json").then(r=>r.ok?r.json():null).then(meta=>{ if(!meta) return;
-  histOv = L.imageOverlay(DATA+meta.image, meta.bounds, {opacity:0.8, pane:"hist"});
+  histOv = trackLoad(L.imageOverlay(DATA+meta.image, meta.bounds, {opacity:0.8, pane:"hist"}));
   const op=document.getElementById("histOpacity");
   op.addEventListener("input",()=>histOv.setOpacity(+op.value/100));
 }).catch(()=>{});
@@ -201,12 +238,12 @@ fetch(DATA+"preflood.json").then(r=>r.ok?r.json():null).then(meta=>{ if(!meta) r
 // ---- Ghost relief: full-reservoir LiDAR coverage (2 m tiles + 1 m village sites) ----
 fetch(DATA+"reservoir_ghost.json").then(r=>r.ok?r.json():null).then(list=>{
   if(!list) return;
-  list.forEach(s=> reliefGroup.addLayer(L.imageOverlay(DATA+"imprintg_"+s.slug+".png", s.bounds, {opacity:0.96, pane:"lidar"})));
+  list.forEach(s=> reliefGroup.addLayer(trackLoad(L.imageOverlay(DATA+"imprintg_"+s.slug+".png", s.bounds, {opacity:+ghostOp.value/100, pane:"lidar"}))));
 }).catch(()=>{});
 // ---- Traced lines (auto-detected road/wall candidates) from the per-town survey ----
 fetch(DATA+"imprints.json").then(r=>r.ok?r.json():null).then(list=>{
   if(!list) return;
-  list.forEach(s=> traceGroup.addLayer(L.imageOverlay(DATA+"imprint_"+s.slug+"_trace.png", s.bounds, {opacity:0.95, pane:"trace"})));
+  list.forEach(s=> traceGroup.addLayer(trackLoad(L.imageOverlay(DATA+"imprint_"+s.slug+"_trace.png", s.bounds, {opacity:0.95, pane:"trace"}))));
 }).catch(()=>{});
 // ---- jump-to buttons: the whole reservoir + the surviving village sites ----
 const JUMPS = [
@@ -226,11 +263,14 @@ function setStage(stage){ const f=floodFeatures.find(x=>x.properties.stage===sta
   document.getElementById("readout").textContent=`${p.pool_ft} ft · ${p.pct}%`+(stage===floodFeatures.length?" (1946)":""); }
 document.getElementById("slider").addEventListener("input",e=>setStage(+e.target.value));
 let timer=null;
-document.getElementById("play").addEventListener("click",function(){
-  if(timer){clearInterval(timer);timer=null;this.textContent="▶";return;}
-  this.textContent="❚❚"; const last=floodFeatures.length||1; const sl=document.getElementById("slider");
+const playBtn=document.getElementById("play");
+function setPlayBtn(playing){ playBtn.textContent=playing?"❚❚":"▶";
+  playBtn.setAttribute("aria-label",playing?"Pause filling animation":"Play filling animation"); }
+playBtn.addEventListener("click",function(){
+  if(timer){clearInterval(timer);timer=null;setPlayBtn(false);return;}
+  setPlayBtn(true); const last=floodFeatures.length||1; const sl=document.getElementById("slider");
   let s=(+sl.value>=last)?1:+sl.value; sl.value=s; setStage(s);
-  timer=setInterval(()=>{s++; if(s>last){clearInterval(timer);timer=null;document.getElementById("play").textContent="▶";return;} sl.value=s; setStage(s);},560);
+  timer=setInterval(()=>{s++; if(s>last){clearInterval(timer);timer=null;setPlayBtn(false);return;} sl.value=s; setStage(s);},560);
 });
 
 // ---- layer toggles ----
@@ -239,7 +279,7 @@ function bindChk(id,getLayer,extra){ const el=document.getElementById(id);
   el.addEventListener("change",()=>{ toggle(getLayer(),el.checked); if(extra)extra(el.checked); }); }
 function setChk(id,val){ const el=document.getElementById(id); if(el.checked!==val){ el.checked=val; el.dispatchEvent(new Event("change")); } }
 
-bindChk("lRelief",()=>reliefGroup);
+bindChk("lRelief",()=>reliefGroup,on=>{ document.getElementById("reliefSub").style.display = on ? "block" : "none"; });
 bindChk("lTrace",()=>traceGroup);
 bindChk("lTowns",()=>townsLayer);
 bindChk("lAqueduct",()=>aqueductGroup);
@@ -253,19 +293,21 @@ document.getElementById("bPlain").addEventListener("change",()=>{ map.removeLaye
 const panel=document.getElementById("panel"), about=document.getElementById("about");
 const layersBtn=document.getElementById("layersBtn"), aboutBtn=document.getElementById("aboutBtn");
 const isMobile=()=>matchMedia("(max-width:640px)").matches;
-function closeSheetMobile(){ if(isMobile()){ panel.classList.remove("show"); layersBtn.classList.remove("on"); document.getElementById("flood").classList.remove("dim"); } }
+function setAbout(open){ about.classList.toggle("show",open); aboutBtn.classList.toggle("on",open);
+  aboutBtn.setAttribute("aria-pressed",String(open)); }
+function setPanel(open){ panel.classList.toggle("show",open); layersBtn.classList.toggle("on",open);
+  layersBtn.setAttribute("aria-pressed",String(open));
+  if(isMobile()) document.getElementById("flood").classList.toggle("dim",open); }
+function closeSheetMobile(){ if(isMobile()) setPanel(false); }
 layersBtn.addEventListener("click",()=>{ const open=!panel.classList.contains("show");
-  panel.classList.toggle("show",open); layersBtn.classList.toggle("on",open);
-  if(isMobile()) document.getElementById("flood").classList.toggle("dim",open);
-  if(open){ about.classList.remove("show"); aboutBtn.classList.remove("on"); } });
+  setPanel(open); if(open) setAbout(false); });
 aboutBtn.addEventListener("click",()=>{ const open=!about.classList.contains("show");
-  about.classList.toggle("show",open); aboutBtn.classList.toggle("on",open);
-  if(open){ closeSheetMobile(); } });
-map.on("click",()=>{ closeSheetMobile(); about.classList.remove("show"); aboutBtn.classList.remove("on"); });
+  setAbout(open); if(open) closeSheetMobile(); });
+map.on("click",()=>{ closeSheetMobile(); setAbout(false); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"){ setAbout(false); closeSheetMobile(); } });
 
 // open the controls by default on desktop; closed on mobile
-if(!isMobile()){ panel.classList.add("show"); layersBtn.classList.add("on"); }
-else { about.classList.add("show"); aboutBtn.classList.add("on"); }
+if(!isMobile()) setPanel(true); else setAbout(true);
 </script>
 </body>
 </html>

@@ -49,9 +49,6 @@ POOL_M  <- POOL_FT * 0.3048            # 161.5 m
 #           guarded by a fast probe that falls back to "dem".
 RESERVOIR_METHOD <- "dem"
 
-# Pour point just below Winsor Dam (south end) for watershed queries.
-POUR_LL <- st_sfc(st_point(c(-72.3490, 42.2975)), crs = CRS_LL)
-
 # --- Cartography ----------------------------------------------------------
 # Low -> high hypsometric ramp tuned for a New England valley (~100-400 m).
 HYPSO_PAL <- c("#1d4d2b", "#3f7a3f", "#7aa55a", "#bcc98c",
@@ -81,7 +78,6 @@ theme_quabbin <- function(base = 12) {
 }
 
 # --- Small helpers --------------------------------------------------------
-`%||%` <- function(a, b) if (is.null(a) || length(a) == 0) b else a
 msg <- function(...) cat(sprintf("[quabbin] %s\n", sprintf(...)))
 
 # Save a ggplot at a consistent size/quality.

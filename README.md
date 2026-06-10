@@ -68,11 +68,14 @@ Rscript quabbin/run_all.R
 
 Downloads are cached under `quabbin/data/cache/` (git-ignored), so the first
 run takes a few minutes and every run after that is ~90 seconds — except the
-imprint survey (stages 14–15), which mosaics the Prescott Peninsula and is
-cache-guarded: its first build takes several minutes, then later runs skip any
-area whose `output/24_*_survey.png` (or `25_prescott_xref.png`) already exists
-(delete one to force a rebuild). The twenty-one figures and the GIF land in `quabbin/output/`; the web-map
-GeoJSON, the 1893 overlay, and the LiDAR imprint overlays land in
+LiDAR stages (14–16), which mosaic the Prescott Peninsula and tile the whole
+reservoir, and are cache-guarded: their first build takes several minutes,
+then later runs skip any area whose `output/24_*_survey.png` (or
+`25_prescott_xref.png`) already exists, and stage 16 skips entirely while
+`map/data/reservoir_ghost.json` and every overlay it lists are present
+(delete a figure — or `reservoir_ghost.json` — to force a rebuild). The
+twenty figures and the GIF land in `quabbin/output/`; the web-map
+GeoJSON, the 1893 overlay, and the LiDAR ghost/imprint overlays land in
 `quabbin/map/data/`. (The GIF needs
 ImageMagick — `apt-get install imagemagick`; without it the pipeline still
 produces the panel `09`.)
@@ -102,7 +105,8 @@ quabbin/
 │   ├── 13_roads.R         the valley's 1893 road network, reservoir overlaid
 │   ├── 14_imprints.R      LiDAR imprint survey (MassGIS) + per-town survey figures
 │   ├── 15_xref.R          cross-reference: extracted 1893 roads vs the LiDAR traces
-│   └── 16_reservoir.R     full-reservoir "ghost relief" coverage for the explorer
+│   ├── 16_reservoir.R     full-reservoir "ghost relief" coverage for the explorer
+│   └── lidar_utils.R      shared helpers for the LiDAR stages 14–16 (LRM, hillshade, line tracing, MassGIS export)
 ├── data/
 │   ├── drowned_towns.csv  the four towns: location, county, charter & end dates
 │   └── town_population.csv real US Census counts 1900–1920 + peaks + 1938 dissolution
@@ -212,10 +216,11 @@ never breaks the run — it degrades to a documented fallback instead.
   Ouimet Lab; Johnson & Ouimet 2014), but not combined into a LiDAR imprint survey of
   the four towns. The Prescott Peninsula runs ~12 km — beyond the server's single-export
   cap — so it is mosaicked from three ~2 m strips into one DEM for full-length coverage;
-  the stage is cache-guarded (skips any area whose survey figure already exists), so only
-  the first build pays the render cost. Exported as static survey figures (`output/24_*`)
-  and as web overlays (relief + traces, transparent over water) with bounds in
-  `map/data/imprints.json`.
+  the stage is cache-guarded (skips any area whose survey figure — and, for web areas,
+  trace overlay — already exists), so only the first build pays the render cost. Exported
+  as static survey figures (`output/24_*`) and as auto-trace web overlays (transparent
+  over water) with bounds in `map/data/imprints.json`; the explorer's relief itself comes
+  from the full-reservoir ghost layer (`16_reservoir.R`).
 - **Interactive imprint explorer** — Leaflet (vendored locally, no CDN dependency),
   mobile-first: a full-screen map, bottom-sheet **Layers** control, big touch targets,
   a full-width pool slider, and zoom to z19. It serves the full-reservoir **ghost relief**
@@ -231,8 +236,10 @@ never breaks the run — it degrades to a documented fallback instead.
   coverage is ~2 m with a fixed contrast span so tiles match seamlessly; the surviving
   village sites (Prescott Center, Dana Common) get crisp ~1 m tiles. Turn on **Ghost
   relief** in the explorer and zoom in to hunt footprints anywhere the reservoir spared.
-  Downloads are cache-guarded (the slow part); re-runs re-export quickly. Exits to web
-  overlays + `map/data/reservoir_ghost.json`.
+  Cache-guarded twice: the LiDAR downloads (the slow part), and the whole stage — re-runs
+  skip the re-export while `map/data/reservoir_ghost.json` and every overlay it lists
+  exist (delete the manifest to force a rebuild). Exports web overlays +
+  `map/data/reservoir_ghost.json`.
 - **Ground-truth cross-reference** (`15_xref.R`) — closes the loop on the imprints:
   it extracts the 1893 road network straight from the quad (dark, low-saturation
   linework, morphologically closed, kept only where elongated → roads, not text),

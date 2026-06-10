@@ -14,41 +14,13 @@
 # -------------------------------------------------------------------------
 if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() else file.path(getwd(), "quabbin")
 if (!exists("POOL_M")) source(file.path(QB_DIR, "R", "00_setup.R"))
+source(file.path(QB_DIR, "R", "lidar_utils.R"))
 OUT <- file.path(DIR_OUTPUT, "25_prescott_xref.png")
 STRIP <- file.path(DIR_CACHE, "massgis_prescott_2.tif")   # middle peninsula strip, fetched by 14_imprints
 if (file.exists(OUT)) { msg("xref: 25_prescott_xref.png cached, skipping") } else if (!file.exists(STRIP)) {
   msg("xref: %s not found (run 14_imprints first); skipping", basename(STRIP))
 } else {
 TOPO_1893 <- file.path(DIR_CACHE, "preflood_belchertown_1893.tif")
-WATER_LVL <- POOL_M + 0.5; wc <- grDevices::col2rgb(WATER_FILL)[, 1]
-to_raster <- function(r) { a <- terra::as.array(r) / 255; a[is.na(a)] <- 1; grDevices::as.raster(a) }
-lrm <- function(d, K = 25) d - terra::focal(d, w = K, fun = "mean", na.rm = TRUE)
-mdow <- function(d, angle = 35) { slp <- terra::terrain(d, "slope", unit = "radians"); asp <- terra::terrain(d, "aspect", unit = "radians")
-  hs <- Reduce(`+`, lapply(seq(0, 315, 45), function(a) terra::shade(slp, asp, angle = angle, direction = a))) / 8
-  terra::clamp((hs - 0.5) * 1.6 + 0.5, 0, 1) }
-relief_grey <- function(d, L, span) { hs <- mdow(d); neg <- terra::clamp(-L / span, 0, 1); pos <- terra::clamp(L / span, 0, 1)
-  terra::clamp(hs * (1 - 0.5 * neg) + 0.32 * pos * (1 - hs), 0, 1) }
-linfilter <- function(mask, Nmin, Emin, Lmin) {
-  p <- terra::patches(mask, directions = 8, zeroAsNA = TRUE); v <- terra::values(p)[, 1]; cells <- which(!is.na(v))
-  if (!length(cells)) return(p * NA)
-  ids <- v[cells]; xy <- terra::xyFromCell(p, cells); spl <- split(as.data.frame(xy), ids)
-  sizes <- vapply(spl, nrow, integer(1))
-  st <- lapply(spl, function(z) { if (nrow(z) < 8) return(c(0, 0)); ev <- eigen(stats::cov(z), only.values = TRUE)$values
-    c(sqrt(max(ev) / max(min(ev), 1e-4)), sqrt(max(ev)) * 3.5) })
-  el <- vapply(st, `[`, numeric(1), 1); ln <- vapply(st, `[`, numeric(1), 2)
-  keep <- as.numeric(names(sizes)[sizes >= Nmin & el >= Emin & ln >= Lmin])
-  if (length(keep)) terra::subst(p, keep, 1, others = NA) else p * NA
-}
-extract_lines <- function(signed, thr, slope, smax, water, Nmin, Emin, Lmin)
-  linfilter(terra::ifel(signed > thr & slope < smax & !water, 1, NA), Nmin, Emin, Lmin)
-render_one <- function(ras, sub, e, file, w, h) {
-  p <- ggplot() + annotation_raster(ras, e[1], e[2], e[3], e[4], interpolate = TRUE) +
-    coord_sf(crs = st_crs(CRS_MA), xlim = c(e[1], e[2]), ylim = c(e[3], e[4]), datum = NA, expand = FALSE) +
-    labs(subtitle = sub) + theme_quabbin() +
-    theme(axis.text = element_blank(), axis.title = element_blank(), panel.grid = element_blank(),
-          plot.subtitle = element_text(face = "bold", size = 10), panel.border = element_rect(colour = "#888888", fill = NA, linewidth = 0.5))
-  ggsave(file, p, width = w, height = h, dpi = 150, bg = "white"); file
-}
 
 dem <- terra::rast(STRIP)[[1]]
 demS <- terra::focal(dem, 3, "mean", na.rm = TRUE); water <- dem <= WATER_LVL; e <- terra::ext(dem)
@@ -81,9 +53,9 @@ rasB <- paint(list(list(m = !is.na(walls), col = "#1fb6a6"), list(m = new, col =
 
 asp <- terra::nrow(dem) / terra::ncol(dem); pw <- 4.6; ph <- max(4.4, min(13, pw * asp))
 t1 <- tempfile(fileext = ".png"); t2 <- tempfile(fileext = ".png"); t3 <- tempfile(fileext = ".png")
-render_one(rasC, "MassGIS LiDAR relief", e, t1, pw, ph)
-render_one(rasA, "1893 road network, extracted from the quad (blue)", e, t2, pw, ph)
-render_one(rasB, "LiDAR lineations: confirmed by 1893 (green) - unverified (orange) - banks/walls (teal)", e, t3, pw, ph)
+render_one(rasC, "MassGIS LiDAR relief", e, t1, pw, ph, sub_size = 10)
+render_one(rasA, "1893 road network, extracted from the quad (blue)", e, t2, pw, ph, sub_size = 10)
+render_one(rasB, "LiDAR lineations: confirmed by 1893 (green) - unverified (orange) - banks/walls (teal)", e, t3, pw, ph, sub_size = 10)
 imgs <- lapply(c(t1, t2, t3), png::readPNG)
 grDevices::png(OUT, width = pw * 3 * 150, height = (ph + 0.55) * 150, res = 150)
 grid::grid.newpage()
