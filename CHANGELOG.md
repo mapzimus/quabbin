@@ -7,23 +7,23 @@ verified independently. No rendered figures or web data were regenerated — onl
 source, markup, and docs changed (12 files, ~+186/−173, plus this changelog).
 
 ### Explorer (`map/index.html`)
-- Loading indicator while LiDAR/overlay imagery streams in (the Ghost-relief layer
+- Loading indicator while LiDAR/overlay imagery streams in (the Bare-earth relief layer
   is ~37 MB); overlays confirmed to fetch only when a layer is first enabled.
-- Ghost-relief **opacity slider** (shown while the layer is on; drives all tiles).
+- Bare-earth relief **opacity slider** (shown while the layer is on; drives all tiles).
 - **Scale bar** (metric + imperial; hidden on mobile so it can't collide with the
   flood bar) and a `LiDAR: MassGIS` attribution.
 - Honesty: a "schematic stages" label + tooltip on the reservoir-filling slider.
-- About copy now leads with Ghost relief and names MassGIS 1 m bare-earth LiDAR;
+- About copy now leads with Bare-earth relief and names MassGIS 1 m bare-earth LiDAR;
   trace legend states the actual colours (roads/paths orange, stone walls teal).
 - Accessibility: `aria-pressed` synced on the About/Layers toggles; play/pause
   `aria-label`; `:focus-visible` outlines; ESC closes the About panel and the
   mobile sheet; transitions/spinner gated behind `prefers-reduced-motion`.
 
 ### Project page (`quabbin.html`, `js/projects.js`)
-- New section **"The ghosts in the ground"** (between the animation and the gallery):
+- New section **"What survives in the ground"** (between the animation and the gallery):
   a short, factual explainer with the Prescott 1893-vs-LiDAR triptych and a CTA
   into the explorer.
-- Hero tightened (6→5 paragraphs) with the ghost-relief explorer as the headline;
+- Hero tightened (6→5 paragraphs) with the bare-earth relief explorer as the headline;
   flood-fill section relabelled and reworded as a schematic illustration, not
   surveyed bathymetry; "MassGIS LiDAR" added to the tech pills.
 - Gallery image render gets lazy-loading + meaningful `alt`; lightbox controls got
@@ -65,7 +65,7 @@ source, markup, and docs changed (12 files, ~+186/−173, plus this changelog).
 - LiDAR of the surviving sites + the 1893 road network (#22, #23).
 - LiDAR **imprint survey** of the four towns + the mobile-first imprint explorer (#23).
 - Explorer map fixes: zoom-in limit, control/panel overlaps, sharper peninsula (#24).
-- Full-reservoir bare-earth **"ghost relief"** coverage for the explorer (#26).
+- Full-reservoir **bare-earth relief** coverage for the explorer (#26).
 - Reservoir derived from MassGIS LiDAR — **dam-contained**, no longer spilling past
   the dams onto Belchertown/Ware (#28).
 - Ground-truth cross-reference (1893 roads vs. LiDAR traces) (#25/#28 era).
