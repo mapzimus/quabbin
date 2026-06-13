@@ -60,13 +60,16 @@ sudo apt-get install -y r-base-core r-cran-sf r-cran-terra r-cran-raster \
 Rscript -e 'install.packages(c("elevatr","osmdata","tigris","ggspatial","ggnewscale","ggrepel","patchwork"))'
 ```
 
-Then, from the repository root:
+Then, from the study folder:
 
 ```bash
-Rscript quabbin/run_all.R
+Rscript run_all.R
 ```
 
-Downloads are cached under `quabbin/data/cache/` (git-ignored), so the first
+(`run_all.R` locates its own folder, so it also works from anywhere —
+e.g. `Rscript path/to/run_all.R`.)
+
+Downloads are cached under `data/cache/` (git-ignored), so the first
 run takes a few minutes and every run after that is ~90 seconds — except the
 LiDAR stages (14–16), which mosaic the Prescott Peninsula and tile the whole
 reservoir, and are cache-guarded: their first build takes several minutes,
@@ -74,14 +77,14 @@ then later runs skip any area whose `output/24_*_survey.png` (or
 `25_prescott_xref.png`) already exists, and stage 16 skips entirely while
 `map/data/reservoir_ghost.json` and every overlay it lists are present
 (delete a figure — or `reservoir_ghost.json` — to force a rebuild). The
-twenty figures and the GIF land in `quabbin/output/`; the web-map
+twenty figures and the GIF land in `output/`; the web-map
 GeoJSON, the 1893 overlay, and the LiDAR relief/imprint overlays land in
-`quabbin/map/data/`. (The GIF needs
+`map/data/`. (The GIF needs
 ImageMagick — `apt-get install imagemagick`; without it the pipeline still
 produces the panel `09`.)
 
-The interactive map is static files — serve `quabbin/map/` over HTTP, e.g.
-`python3 -m http.server --directory quabbin/map`, then open `localhost:8000`.
+The interactive map is static files — serve `map/` over HTTP, e.g.
+`python3 -m http.server --directory map`, then open `localhost:8000`.
 
 ## How it is built
 
@@ -253,6 +256,25 @@ never breaks the run — it degrades to a documented fallback instead.
 
 `R` · `sf` · `terra` · `elevatr` · `osmdata` · `tigris` · `ggplot2` ·
 `ggnewscale` · `ggrepel` · `ggspatial` · `patchwork` · ImageMagick · Leaflet · GDAL 3.8
+
+## Where this lives
+
+The study exists in two places:
+
+- **[`mapzimus/quabbin`](https://github.com/mapzimus/quabbin)** — the
+  standalone repository and **source of truth**. Changes are made here first.
+- The **`quabbin/` folder of the portfolio repository**, a copy that serves the
+  live [project page](https://maxwellhowegis.com/quabbin.html) and the
+  [interactive explorer](https://maxwellhowegis.com/quabbin/map/) at
+  maxwellhowegis.com. After a change lands in the standalone repo, copy it into
+  the portfolio folder to publish it.
+
+## License
+
+The code (the `R/` scripts, `run_all.R`, and the explorer in `map/`) is
+released under the [MIT License](LICENSE). The underlying elevation, LiDAR,
+census, and historical-map data are U.S. public-domain sources, credited in
+[Data, methods, and honest caveats](#data-methods-and-honest-caveats) above.
 
 ---
 *Part of an ongoing series of multi-layer GIS studies of geography-shaped

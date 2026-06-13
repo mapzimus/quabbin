@@ -1,5 +1,20 @@
 # Quabbin study — changelog
 
+## 2026-06-12 — Standalone-repo closeout
+
+The study moved into its own repository ([`mapzimus/quabbin`](https://github.com/mapzimus/quabbin)),
+split from the portfolio repo with history preserved. Final tidy for the split:
+
+- README and `run_all.R` run instructions no longer assume the old `quabbin/`
+  subfolder layout — paths are now relative to the study folder, so the same
+  text is correct in both the standalone repo and the portfolio copy.
+- **MIT license** added (code only; the data sources are U.S. public domain,
+  credited in the README).
+- New README section **"Where this lives"** documents the two-copy workflow:
+  the standalone repo is the source of truth; the portfolio's `quabbin/`
+  folder is the deployed copy that serves the live page and explorer.
+- GitHub repo metadata filled in: description, topics, homepage.
+
 ## 2026-06-10 — UX, accessibility & code-quality round (multi-agent)
 
 A parallel polish pass (three workers on disjoint files + an overseer audit),

@@ -1,9 +1,10 @@
 #!/usr/bin/env Rscript
 # run_all.R ---------------------------------------------------------------
 # One-command reproduction of the Quabbin study.
-#   Rscript quabbin/run_all.R          # from the repo root
+#   Rscript run_all.R                  # from the study folder (or anywhere,
+#                                      # via the script's own path)
 # Sources the numbered scripts in order in a single session; rasters stay in
-# memory between stages. Downloaded data is cached under quabbin/data/cache/
+# memory between stages. Downloaded data is cached under data/cache/
 # so re-runs are fast and offline-friendly.
 # -------------------------------------------------------------------------
 
