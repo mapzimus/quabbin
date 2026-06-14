@@ -58,16 +58,31 @@ deco  <- list(
 )
 
 # --- 1. Locator -----------------------------------------------------------
-p1 <- ggplot() +
-  (if (!is.null(state_ma)) geom_sf(data = state_ma, fill = "#ededed", colour = "#c4c4c4", linewidth = 0.2)) +
-  geom_sf(data = reservoir_ma, fill = WATER_FILL, colour = WATER_LINE, linewidth = 0.2) +
-  geom_sf(data = aoi_ma, fill = NA, colour = "#d62828", linewidth = 0.7) +
-  coord_sf(crs = st_crs(CRS_MA), datum = NA, expand = TRUE) +
+# The valley in shaded relief (the subject), with a small Massachusetts "you are
+# here" chip that places it in the state and traces the water's run east to Boston.
+p1_main <- ggplot() + relief_colored() +
+  geom_sf(data = reservoir_ma, fill = WATER_FILL, colour = WATER_LINE, linewidth = 0.3, alpha = 0.92) +
+  town_pts + town_labs + deco + coord +
   labs(title = "Quabbin Reservoir, Massachusetts",
        subtitle = "Boston's water supply, on the site of four former towns",
        caption = ATTRIB) +
   theme_quabbin()
-save_map(p1, "01_locator.png", w = 9, h = 7)
+
+boston_ma  <- st_transform(st_sfc(st_point(c(-71.0589, 42.3601)), crs = CRS_LL), CRS_MA)
+quabbin_pt <- suppressWarnings(st_centroid(st_geometry(reservoir_ma)))
+qc <- st_coordinates(quabbin_pt); bc <- st_coordinates(boston_ma)
+p1_chip <- ggplot() +
+  (if (!is.null(state_ma)) geom_sf(data = state_ma, fill = "#eceae4", colour = "#bdbab2", linewidth = 0.3)) +
+  geom_sf(data = boston_ma,  shape = 21, fill = "#d62828", colour = "white", size = 2.4, stroke = 0.5) +
+  geom_sf(data = quabbin_pt, shape = 21, fill = WATER_FILL, colour = WATER_LINE, size = 3.4, stroke = 0.6) +
+  annotate("text", x = qc[1], y = qc[2] + 17000, label = "Quabbin", size = 2.7, fontface = "bold", colour = WATER_LINE) +
+  annotate("text", x = bc[1], y = bc[2] - 19000, label = "Boston",  size = 2.5, colour = "#7a1f1f") +
+  coord_sf(crs = st_crs(CRS_MA), datum = NA, expand = TRUE) +
+  theme_void() +
+  theme(plot.background = element_rect(fill = "white", colour = "#cccccc", linewidth = 0.4))
+
+p1 <- p1_main + patchwork::inset_element(p1_chip, left = 0.0, bottom = 0.0, right = 0.44, top = 0.31, align_to = "panel")
+save_map(p1, "01_locator.png", w = 9, h = 9)
 
 # --- 2. Terrain: why this valley -----------------------------------------
 p2 <- ggplot() + relief_colored() +

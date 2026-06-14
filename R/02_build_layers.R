@@ -65,6 +65,27 @@ if (!is.null(reservoir_true)) {
 # Clip to AOI and dissolve to a single waterbody.
 reservoir_ma <- st_intersection(st_union(st_geometry(reservoir_ma)), st_geometry(aoi_ma))
 reservoir_ma <- st_sf(name = "Quabbin Reservoir", geometry = st_sfc(reservoir_ma, crs = CRS_MA))
+
+# --- Enforce dam containment ---------------------------------------------
+# Winsor Dam (42.2967 N) and Goodnough Dike (42.2920 N) are the reservoir's true
+# southern boundary. Even the MassGIS 10 m extraction above still leaks ~2 km^2 of
+# below-dam land into the largest patch (the dams don't fully seal at 10 m), which
+# is what drew water south of the dams onto Belchertown/Ware in earlier figures.
+# Clip everything south of the dam line so no waterbody is ever drawn below the dams.
+.dam <- rbind(c(-72.3370, 42.2967), c(-72.3000, 42.2920))   # Winsor Dam, Goodnough Dike
+.dm  <- stats::lm(.dam[, 2] ~ .dam[, 1])
+.aoi_ll <- st_bbox(st_transform(aoi_ma, CRS_LL))            # span the full AOI width (+ margin)
+.xe  <- c(as.numeric(.aoi_ll["xmin"]) - 0.05, as.numeric(.aoi_ll["xmax"]) + 0.05)
+.ye  <- as.numeric(coef(.dm)[1] + coef(.dm)[2] * .xe)
+.south <- st_transform(st_sfc(st_polygon(list(rbind(
+            cbind(.xe, .ye), c(.xe[2], 42.10), c(.xe[1], 42.10), c(.xe[1], .ye[1])))),
+            crs = CRS_LL), CRS_MA)
+.cl <- st_cast(st_make_valid(st_difference(st_geometry(reservoir_ma), st_geometry(.south))),
+               "POLYGON", warn = FALSE)
+if (length(.cl) == 0L) stop("dam-containment clip produced no polygons - check reservoir/clip geometry")
+reservoir_ma <- st_sf(name = "Quabbin Reservoir",
+                      geometry = st_sfc(.cl[which.max(as.numeric(st_area(.cl)))], crs = CRS_MA))
+
 st_write(reservoir_ma, file.path(DIR_CACHE, "reservoir_ma.gpkg"), quiet = TRUE, delete_dsn = TRUE)
 msg("Reservoir source: %s", RES_SRC)
 

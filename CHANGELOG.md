@@ -1,5 +1,33 @@
 # Quabbin study — changelog
 
+## 2026-06-14 — Dam-containment fix + locator redesign
+
+Two cleanup items on the regenerated figures.
+
+### Reservoir no longer spills below the dams
+The reservoir footprint is built in `R/02_build_layers.R` from MassGIS 1 m LiDAR
+(downsampled to 10 m). At 10 m the dams don't fully seal, so the "largest patch
+below the 530 ft pool" still pulled in ~2 sq km of below-dam ground — water drawn
+south of Winsor Dam / Goodnough Dike onto Belchertown/Ware. This had leaked into
+every figure that draws the reservoir and into the web explorer's
+`reservoir.geojson`.
+
+- `02_build_layers.R`: after extraction, the footprint is now **clipped at the
+  dam line** (Winsor Dam 42.2967 N, Goodnough Dike 42.2920 N) — the dams are the
+  true southern boundary. Spill dropped from ~2.2 km² to ~0; southern shore now
+  sits at the dams (lat 42.296). The fix applies to whichever branch built the
+  footprint (LiDAR / coarse-DEM / OSM).
+- Regenerated every reservoir-bearing artifact from the dam-contained footprint:
+  figures `01–05`, `08`, `09` (+ flood GIF), `10`, `11`, `13`, `16`, and the web
+  exports `reservoir.geojson` and `floodstages.geojson`. The heavy LiDAR stages
+  (`12`,`14`,`15`,`16_reservoir`) were left untouched — they derive water
+  per-pixel from their own LiDAR DEMs and never used the carve.
+
+### Locator redesigned (`01_locator.png`)
+Replaced the flat grey-state-with-a-red-box locator with a composite: the valley
+in shaded relief (the subject), with the four town sites, and a small
+Massachusetts "you are here" chip marking Quabbin and Boston.
+
 ## 2026-06-12 — Standalone-repo closeout
 
 The study moved into its own repository ([`mapzimus/quabbin`](https://github.com/mapzimus/quabbin)),

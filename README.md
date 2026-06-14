@@ -17,7 +17,7 @@ present-day map in which their land has been absorbed by the surrounding towns.
 
 | # | Figure | What it shows | Source |
 |---|--------|---------------|--------|
-| 1 | `01_locator.png` | The reservoir's location in Massachusetts | TIGER + DEM-derived water |
+| 1 | `01_locator.png` | The valley in shaded relief, with a Massachusetts "you are here" chip (Quabbin → Boston) | AWS Terrain Tiles + TIGER |
 | 2 | `02_dem_hillshade.png` | The Swift River Valley basin (shaded relief) | AWS Terrain Tiles (elevatr) |
 | 3 | `03_reservoir_towns.png` | The four former towns over the present reservoir | DEM + town points |
 | 4 | `04_watershed.png` | The reservoir within its drainage (regional context) | USGS WBD HUC-10 |
@@ -127,11 +127,13 @@ never breaks the run — it degrades to a documented fallback instead.
   `elevatr::get_elev_raster(z = 11)`, reprojected to NAD83 / Massachusetts
   Mainland (EPSG:26986) and hillshaded with `terra`.
 - **Reservoir** — derived from **MassGIS 1 m LiDAR** (downsampled to 10 m): the
-  largest contiguous area at/below the 530-ft full pool. Unlike the coarse
-  regional DEM, the LiDAR **resolves Winsor Dam and Goodnough Dike**, so the basin
-  is correctly cut off from the downstream lowlands — the water no longer spills
-  south past the dams onto Belchertown/Ware streets (an earlier coarse-DEM
-  artifact). If MassGIS is unreachable it falls back to the coarse-DEM carve
+  largest contiguous area at/below the 530-ft full pool. The LiDAR resolves the
+  terrain far better than the coarse regional DEM, but at 10 m even it still leaks
+  ~2 sq km of below-dam ground into the largest patch (the dams don't perfectly
+  seal), so the footprint is then **clipped at the Winsor Dam / Goodnough Dike
+  line** — the dams are the reservoir's true southern boundary — and the water no
+  longer spills south past the dams onto Belchertown/Ware (an earlier artifact
+  that had leaked into the gallery). If MassGIS is unreachable it falls back to the coarse-DEM carve
   (largest polygon below the pool), and an OpenStreetMap shoreline path
   (`RESERVOIR_METHOD <- "osm"`) is also available but opt-in (Overpass rate-limits
   cloud IPs).
