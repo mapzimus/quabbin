@@ -1,5 +1,34 @@
 # Quabbin study — changelog
 
+## 2026-06-14 — Full reservoir extent + historical map overlays
+
+Two threads, applied across the whole project (static figures, web GeoJSON, and
+the interactive explorer).
+
+### Full reservoir extent
+- The MassGIS LiDAR reservoir was being fetched over a box that **clipped the
+  reservoir's NE arm** (lat 42.465 / lon -72.275); the northeast (toward Dana and
+  the northern inlets) was cut off flat. Expanded the fetch box to fully contain
+  Quabbin — reservoir area now ~101 km² (was ~74), the real surface.
+- That bigger request exceeded the ImageServer's ~3 Mpx export cap (HTTP 500), so
+  the fetch is now **adaptively sized** (and `lidar_utils` clamps to 2.5 Mpx). A
+  build guard refuses to commit if MassGIS silently falls back to the coarse-DEM
+  carve. Nudged the AOI north so the framed maps have margin above the water.
+- Re-rendered every reservoir-bearing figure (locator, hillshade, towns,
+  watershed, erasure, hero, aqueduct, cross-section, 3D, roads) and re-exported
+  `map/data/reservoir.geojson`. Re-tiled the explorer's full-reservoir **LiDAR
+  relief** coverage (`16_reservoir.R`) to the new extent (30 tiles).
+
+### Historical map overlays (explorer)
+- The single, cut-off 1893 Belchertown quad is replaced by **two full-valley
+  eras** with a year selector in the explorer: **1890s** (Belchertown 1893 + Barre
+  1894, 1:62,500) and **1940s** (Winsor Dam + Quabbin Reservoir 1944, 1:31,680 —
+  twice the detail, the valley as it was being taken). One 15' sheet only covers
+  half the valley, so each era is a two-sheet mosaic, clipped to neatlines and
+  tonally harmonized at the seam (`11_preflood.R` → `histmaps.json`).
+- `13_roads.R` now draws on the 1890s mosaic with a frame that spans the whole
+  reservoir, so `16_roads.png` no longer clips the NE arm or runs off the base map.
+
 ## 2026-06-14 — Dam-containment fix + locator redesign
 
 Two cleanup items on the regenerated figures.

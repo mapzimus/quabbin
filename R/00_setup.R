@@ -32,7 +32,7 @@ CRS_LL <- 4326    # WGS84 lon/lat (everything is fetched in this)
 CRS_MA <- 26986   # NAD83 / Massachusetts Mainland (metres) -- area-true maps
 
 # --- Area of interest: the Swift River Valley / Quabbin Reservoir ---------
-AOI_BBOX <- c(xmin = -72.46, ymin = 42.22, xmax = -72.18, ymax = 42.50)
+AOI_BBOX <- c(xmin = -72.46, ymin = 42.22, xmax = -72.18, ymax = 42.53)
 aoi_ll   <- st_as_sfc(st_bbox(AOI_BBOX, crs = CRS_LL))
 aoi_ma   <- st_transform(aoi_ll, CRS_MA)
 

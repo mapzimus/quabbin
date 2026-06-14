@@ -34,18 +34,22 @@ msg("DEM reprojected to EPSG:%d and hillshaded (%d x %d cells)", CRS_MA, nrow(de
 # contiguous body at/below the pool is the basin, cleanly cut off from downstream.
 MG_DEM <- "https://arcgisserver.digital.mass.gov/arcgisserver/rest/services/LiDAR/DEM_lidar_2013to2021_32bitFloat/ImageServer/exportImage"
 reservoir_true <- tryCatch({
-  bb <- c(-72.400, 42.285, -72.275, 42.465); mpp <- 10
-  dst <- file.path(DIR_CACHE, "massgis_reservoir10m.tif")
+  bb <- c(-72.405, 42.285, -72.195, 42.515)   # fully contains Quabbin (N/E arms were truncated at the old box)
+  latm <- mean(c(bb[2], bb[4]))
+  wm <- (bb[3] - bb[1]) * cos(latm * pi / 180) * 111320; hm <- (bb[4] - bb[2]) * 111320
+  # Size the export to stay under the ImageServer's ~2.8M-px cap (it 500s above ~3M);
+  # never finer than 10 m. For this box mpp lands ~14 m, plenty for a reservoir outline.
+  mpp <- max(10, ceiling(sqrt(wm * hm / 2.5e6)))
+  dst <- file.path(DIR_CACHE, "massgis_reservoir.tif")
   if (!file.exists(dst) || file.size(dst) < 1e5) {
-    latm <- mean(c(bb[2], bb[4]))
-    w <- round((bb[3] - bb[1]) * cos(latm * pi / 180) * 111320 / mpp); h <- round((bb[4] - bb[2]) * 111320 / mpp)
+    w <- round(wm / mpp); h <- round(hm / mpp)
     url <- sprintf("%s?bbox=%f,%f,%f,%f&bboxSR=4326&size=%d,%d&imageSR=%d&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image",
                    MG_DEM, bb[1], bb[2], bb[3], bb[4], w, h, CRS_MA)
     ok <- FALSE; for (k in 1:5) { ok <- tryCatch({ download.file(url, dst, mode = "wb", quiet = TRUE); file.exists(dst) && file.size(dst) > 1e5 }, error = function(e) FALSE); if (ok) break; Sys.sleep(2 * k) }
     if (!ok) stop("MassGIS DEM unavailable")
   }
-  d10 <- terra::rast(dst)[[1]]
-  pat <- terra::patches(terra::ifel(d10 <= POOL_M, 1, NA), directions = 8, zeroAsNA = TRUE)
+  dmg <- terra::rast(dst)[[1]]
+  pat <- terra::patches(terra::ifel(dmg <= POOL_M, 1, NA), directions = 8, zeroAsNA = TRUE)
   fr  <- terra::freq(pat); big <- fr$value[which.max(fr$count)]
   pp  <- sf::st_as_sf(terra::as.polygons(terra::ifel(pat == big, 1, NA), dissolve = TRUE))
   st_simplify(st_make_valid(st_union(st_geometry(pp))), dTolerance = 15)

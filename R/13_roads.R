@@ -1,9 +1,10 @@
 # 13_roads.R --------------------------------------------------------------
 # "The roads the reservoir drowned." Instead of a schematic, this renders the
-# real Swift River Valley road network from the georeferenced 1893 USGS
-# Belchertown quadrangle -- its village roads, mills, and the four town centres --
-# and overlays the present Quabbin Reservoir so you can see exactly which roads
-# and villages went under. Edge labels mark the routes out to the surviving
+# real Swift River Valley road network from the georeferenced 1890s USGS
+# survey (the Belchertown 1893 + Barre 1894 mosaic, so the whole reservoir is
+# covered) -- its village roads, mills, and the four town centres -- and
+# overlays the present Quabbin Reservoir so you can see exactly which roads and
+# villages went under. Edge labels mark the routes out to the surviving
 # neighbours. Renders output/16_roads.png.
 # Source: USGS Historical Topographic Map Collection (public domain).
 # -------------------------------------------------------------------------
@@ -11,17 +12,23 @@
 if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() else file.path(getwd(), "quabbin")
 if (!exists("reservoir_ma")) source(file.path(QB_DIR, "R", "02_build_layers.R"))
 
-tif <- file.path(DIR_DATA, "cache", "preflood_belchertown_1893.tif")
-url <- "https://prd-tnm.s3.amazonaws.com/StagedProducts/Maps/HistoricalTopo/GeoTIFF/MA/MA_Belchertown_352469_1893_62500_geo.tif"
-if (!file.exists(tif)) {
-  dir.create(dirname(tif), recursive = TRUE, showWarnings = FALSE)
-  try(download.file(url, tif, mode = "wb", quiet = TRUE), silent = TRUE)
+# Base: the full-valley 1890s mosaic (Belchertown 1893 + Barre 1894) cached by
+# 11_preflood.R, so this figure covers the whole reservoir -- including the NE
+# arm the single Belchertown quad cut off. Falls back to fetching that one quad.
+mos_tif <- file.path(DIR_DATA, "cache", "histmos_1890s.tif")
+if (!file.exists(mos_tif)) {
+  mos_tif <- file.path(DIR_DATA, "cache", "preflood_belchertown_1893.tif")
+  if (!file.exists(mos_tif)) {
+    dir.create(dirname(mos_tif), recursive = TRUE, showWarnings = FALSE)
+    try(download.file("https://prd-tnm.s3.amazonaws.com/StagedProducts/Maps/HistoricalTopo/GeoTIFF/MA/MA_Belchertown_352469_1893_62500_geo.tif",
+                      mos_tif, mode = "wb", quiet = TRUE), silent = TRUE)
+  }
 }
-stopifnot(file.exists(tif))
+stopifnot(file.exists(mos_tif))
 
-# crop to the valley core (in the quad's native CRS), reproject to State Plane
-valley_ll <- terra::as.polygons(terra::ext(-72.47, -72.25, 42.26, 42.47), crs = "EPSG:4326")
-topo  <- terra::rast(tif)
+# frame the whole reservoir + valley (the 1890s mosaic spans lon -72.46..-72.18, lat 42.25..42.50)
+valley_ll <- terra::as.polygons(terra::ext(-72.455, -72.185, 42.262, 42.500), crs = "EPSG:4326")
+topo  <- terra::rast(mos_tif)
 topo_c <- terra::crop(topo, terra::project(valley_ll, terra::crs(topo)))
 topo_ma <- terra::project(topo_c, "EPSG:26986", method = "bilinear")
 f <- floor(terra::ncol(topo_ma) / 1800); if (f > 1) topo_ma <- terra::aggregate(topo_ma, f, fun = "mean", na.rm = TRUE)
@@ -40,8 +47,8 @@ tw$X <- st_coordinates(tw_ma)[, 1]; tw$Y <- st_coordinates(tw_ma)[, 2]
 edge <- data.frame(
   label = c("to Petersham", "to Hardwick", "to Ware", "to Belchertown",
             "to Pelham &\nAmherst", "to Shutesbury", "to New Salem"),
-  lon = c(-72.258, -72.256, -72.272, -72.448, -72.460, -72.452, -72.345),
-  lat = c( 42.455,  42.352,  42.270,  42.276,  42.398,  42.452,  42.462), stringsAsFactors = FALSE)
+  lon = c(-72.210, -72.196, -72.238, -72.440, -72.450, -72.450, -72.330),
+  lat = c( 42.487,  42.392,  42.266,  42.268,  42.392,  42.470,  42.492), stringsAsFactors = FALSE)
 edge_ma <- st_transform(st_as_sf(edge, coords = c("lon", "lat"), crs = CRS_LL), CRS_MA)
 edge$X <- st_coordinates(edge_ma)[, 1]; edge$Y <- st_coordinates(edge_ma)[, 2]
 
@@ -59,8 +66,8 @@ p_roads <- ggplot() +
                               text_cex = 0.6, pad_y = unit(0.35, "cm")) +
   coord_sf(crs = st_crs(CRS_MA), xlim = c(xmn, xmx), ylim = c(ymn, ymx), expand = FALSE, datum = NA) +
   labs(title = "The roads the reservoir drowned",
-       subtitle = "The valley's 1893 road network and villages, with the present Quabbin Reservoir overlaid in blue",
-       caption = paste0("Base map: USGS Belchertown 15-minute quadrangle, 1893, 1:62,500 (public domain).\n",
+       subtitle = "The valley's 1890s road network and villages, with the present Quabbin Reservoir overlaid in blue",
+       caption = paste0("Base map: USGS Belchertown (1893) + Barre (1894) 15-minute quadrangles, 1:62,500 (public domain).\n",
                         "Blue: the 530 ft full-pool reservoir. Red: the four drowned town centres.")) +
   theme_quabbin() +
   theme(axis.text = element_blank(), axis.title = element_blank(),

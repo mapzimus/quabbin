@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Quabbin — LiDAR Imprint Explorer | Maxwell Howe GIS</title>
-<meta name="description" content="Explore the Quabbin Reservoir's four lost towns in 1 m LiDAR: hunt the relict roads, paths and field walls still imprinted in the ground on the land that never went under, compare the 1893 survey, and raise the pool over the valley.">
+<meta name="description" content="Explore the Quabbin Reservoir's four lost towns in 1 m LiDAR: hunt the relict roads, paths and field walls still imprinted in the ground on the land that never went under, compare the historical 1890s and 1940s surveys, and raise the pool over the valley.">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -59,6 +59,10 @@
   .row .lab{flex:1}
   .sub{padding:2px 4px 8px 31px;display:none}
   .sub input[type=range]{width:100%;accent-color:#8a5a2b}
+  .histyears{display:flex;gap:5px;margin-bottom:7px}
+  .histyears button{flex:1;min-height:28px;border:1px solid var(--br);background:#fff;border-radius:8px;font:inherit;font-size:12px;color:#555;cursor:pointer}
+  .histyears button:hover{border-color:#b09a6a}
+  .histyears button.on{background:#cdb892;border-color:#a98b54;color:#3a2f17;font-weight:600}
   #reliefOpacity{accent-color:#8a8a8a}
   .jump{display:flex;flex-wrap:wrap;gap:6px;padding:4px}
   .jump button{flex:1 1 calc(50% - 6px);min-height:var(--tap);border:1px solid var(--br);background:#fff;border-radius:9px;
@@ -119,7 +123,7 @@
 <div id="about" class="card">
   <h1>The lost towns of the Swift River Valley</h1>
   <p>Between 1938 and 1946 the Swift River Valley was flooded for the Quabbin Reservoir, erasing four towns — <b>Dana, Enfield, Greenwich, Prescott</b>. On the land that never went under, their <b>street plans, house-lot outlines and cellar holes</b> are still imprinted in the earth.</p>
-  <p>Turn on <b>LiDAR relief</b> and zoom in: the grey is <b>MassGIS 1 m bare-earth LiDAR</b> — the ground with the forest digitally removed — and the old roads, walls and foundations read straight off it. Check what you find against the <b>1893 survey</b>, or raise the <b>pool</b> to see what drowned.</p>
+  <p>Turn on <b>LiDAR relief</b> and zoom in: the grey is <b>MassGIS 1 m bare-earth LiDAR</b> — the ground with the forest digitally removed — and the old roads, walls and foundations read straight off it. Check what you find against the <b>1890s and 1940s surveys</b>, or raise the <b>pool</b> to see what drowned.</p>
   <div class="links">
     <a href="../../quabbin.html">← The full study</a>
     <a href="https://github.com/mapzimus/maxwellhowegis/tree/main/quabbin" target="_blank" rel="noopener">R code ↗</a>
@@ -142,8 +146,8 @@
   </div>
   <div class="grp">
     <h2>History &amp; water</h2>
-    <label class="row"><input type="checkbox" id="lHist"><span class="sw" style="background:#cdb892"></span><span class="lab">1893 survey map</span></label>
-    <div class="sub" id="histSub"><input id="histOpacity" type="range" min="0" max="100" value="80" aria-label="1893 map opacity"></div>
+    <label class="row"><input type="checkbox" id="lHist"><span class="sw" style="background:#cdb892"></span><span class="lab">Historical map</span></label>
+    <div class="sub" id="histSub"><div class="histyears" id="histYears"></div><input id="histOpacity" type="range" min="0" max="100" value="80" aria-label="Historical map opacity"></div>
     <label class="row"><input type="checkbox" id="lTowns" checked><span class="sw" style="background:#fff;border-color:#1a1a1a"></span><span class="lab">Lost town centers</span></label>
     <label class="row"><input type="checkbox" id="lAqueduct"><span class="sw" style="background:#1f6fb0"></span><span class="lab">Aqueduct → Boston</span></label>
     <label class="row"><input type="checkbox" id="lWatershed"><span class="sw" style="background:#2a9d8f;opacity:.5"></span><span class="lab">Watershed</span></label>
@@ -185,7 +189,7 @@ const styles = {
 const fmt = n => n==null ? "—" : n.toLocaleString();
 const reliefGroup = L.layerGroup(), traceGroup = L.layerGroup();
 let floodFeatures=[], floodLayer=L.geoJSON(null,{style:styles.flood}).addTo(map);
-let histOv=null, townsLayer=null, aqueductGroup=null, watershedLayer=null;
+let townsLayer=null, aqueductGroup=null, watershedLayer=null;
 
 // ---- loading chip: overlay images are fetched lazily (Leaflet only sets img.src on first add
 //      to the map); count the ones in flight and show feedback while any are loading ----
@@ -228,12 +232,23 @@ Promise.all(["towns","reservoir","watershed","floodstages","aqueduct","infrastru
        .bindPopup(townPopup(f.properties)).bindTooltip(f.properties.town,{permanent:true,direction:"top",offset:[0,-6]})}).addTo(map); }
 });
 
-// ---- 1893 overlay ----
-fetch(DATA+"preflood.json").then(r=>r.ok?r.json():null).then(meta=>{ if(!meta) return;
-  histOv = trackLoad(L.imageOverlay(DATA+meta.image, meta.bounds, {opacity:0.8, pane:"hist"}));
-  const op=document.getElementById("histOpacity");
-  op.addEventListener("input",()=>histOv.setOpacity(+op.value/100));
+// ---- historical map overlays (multi-era: 1890s + 1940s; year selector) ----
+const histOpEl=document.getElementById("histOpacity"), histYears=document.getElementById("histYears");
+let histLayers={}, curHist=null;
+function curHistLayer(){ return curHist?histLayers[curHist]:null; }
+fetch(DATA+"histmaps.json").then(r=>r.ok?r.json():null).then(list=>{
+  if(!list||!list.length){ document.getElementById("lHist").closest(".row").style.display="none"; document.getElementById("histSub").style.display="none"; return; }
+  curHist=list[0].key;
+  list.forEach(m=>{ histLayers[m.key]=trackLoad(L.imageOverlay(DATA+m.image, m.bounds, {opacity:+histOpEl.value/100, pane:"hist"})); });
+  list.forEach(m=>{ const b=document.createElement("button"); b.textContent=m.label.replace(/ survey$/,""); b.dataset.key=m.key; b.title=m.source;
+    if(m.key===curHist) b.className="on";
+    b.onclick=()=>{ if(curHist===m.key) return; const on=document.getElementById("lHist").checked;
+      if(on) map.removeLayer(histLayers[curHist]);
+      curHist=m.key; histYears.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x.dataset.key===curHist));
+      if(on){ histLayers[curHist].setOpacity(+histOpEl.value/100); map.addLayer(histLayers[curHist]); } };
+    histYears.appendChild(b); });
 }).catch(()=>{});
+histOpEl.addEventListener("input",()=>{ const l=curHistLayer(); if(l) l.setOpacity(+histOpEl.value/100); });
 
 // ---- LiDAR relief: full-reservoir LiDAR coverage (2 m tiles + 1 m village sites) ----
 fetch(DATA+"reservoir_ghost.json").then(r=>r.ok?r.json():null).then(list=>{
@@ -284,7 +299,7 @@ bindChk("lTrace",()=>traceGroup);
 bindChk("lTowns",()=>townsLayer);
 bindChk("lAqueduct",()=>aqueductGroup);
 bindChk("lWatershed",()=>watershedLayer);
-bindChk("lHist",()=>histOv,on=>{ document.getElementById("histSub").style.display = on ? "block" : "none"; });
+bindChk("lHist",()=>curHistLayer(),on=>{ document.getElementById("histSub").style.display = on ? "block" : "none"; });
 
 document.getElementById("bRelief").addEventListener("change",()=>{ map.removeLayer(plain); map.addLayer(reliefBase); });
 document.getElementById("bPlain").addEventListener("change",()=>{ map.removeLayer(reliefBase); map.addLayer(plain); });

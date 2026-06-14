@@ -45,7 +45,9 @@ ghost_overlay <- function(dem, slug, maxdim, span = NULL) {
 landfrac <- function(dem) as.numeric(terra::global(dem > WATER_LVL & !is.na(dem), "mean", na.rm = TRUE))
 
 # ---- broad coverage: tile the reservoir land area at ~2 m ----
-RES <- c(-72.400, 42.270, -72.280, 42.460); NC <- 3; NR <- 6
+# Box spans the FULL reservoir (the N/E arms reach lat 42.52 / lon -72.21);
+# the old box stopped at 42.46 / -72.28 and left the NE arm with no relief.
+RES <- c(-72.410, 42.280, -72.195, 42.520); NC <- 4; NR <- 7
 lon <- seq(RES[1], RES[3], length.out = NC + 1); lat <- seq(RES[2], RES[4], length.out = NR + 1)
 entries <- list()
 for (j in seq_len(NR)) for (i in seq_len(NC)) {

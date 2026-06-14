@@ -32,7 +32,7 @@ present-day map in which their land has been absorbed by the surrounding towns.
 | 13 | `13_terrain3d.png` | 3D view of the valley and reservoir | DEM (`persp`) |
 | 14 | `14_dana_lidar.png` | Dana Common in 1 m LiDAR (surviving town site) | USGS 3DEP LiDAR |
 | 15 | `15_prescott_lidar.png` | The Prescott Peninsula in 1 m LiDAR | USGS 3DEP LiDAR |
-| 16 | `16_roads.png` | The valley's 1893 road network, with the reservoir overlaid | 1893 USGS quad |
+| 16 | `16_roads.png` | The valley's 1890s road network, with the reservoir overlaid | USGS Belchertown 1893 + Barre 1894 |
 | 17 | `24_prescott_survey.png` | The whole Prescott Peninsula: 1893 survey vs. the LiDAR imprints surviving today | MassGIS LiDAR (3-tile mosaic) + 1893 quad |
 | 18 | `24_enfield_survey.png` | Enfield (Winsor Dam): surviving roads on the dry south vs. the drowned center | MassGIS 1 m LiDAR + 1893 quad |
 | 19 | `24_dana_survey.png` | Dana Common: the surviving common/ridge vs. the drowned village | MassGIS 1 m LiDAR + 1893 quad |
@@ -44,8 +44,8 @@ a **"LiDAR relief"** layer covering the *whole* reservoir in bare-earth LiDAR �
 pan and zoom across every acre the reservoir spared to hunt the relict **streets,
 house-lot outlines and cellar-hole pits** of the drowned villages still imprinted
 in the ground (crisp 1 m tiles at the surviving village sites). Toggle the
-auto-traced lines and the 1893 ground-truth survey, raise the pool over the
-valley, and follow the aqueduct east to Boston.
+auto-traced lines and the historical ground-truth surveys (1890s and 1940s),
+raise the pool over the valley, and follow the aqueduct east to Boston.
 
 ![Filling the reservoir](output/quabbin_floodfill.gif)
 
@@ -78,7 +78,7 @@ then later runs skip any area whose `output/24_*_survey.png` (or
 `map/data/reservoir_ghost.json` and every overlay it lists are present
 (delete a figure — or `reservoir_ghost.json` — to force a rebuild). The
 twenty figures and the GIF land in `output/`; the web-map
-GeoJSON, the 1893 overlay, and the LiDAR relief/imprint overlays land in
+GeoJSON, the historical map overlays, and the LiDAR relief/imprint overlays land in
 `map/data/`. (The GIF needs
 ImageMagick — `apt-get install imagemagick`; without it the pipeline still
 produces the panel `09`.)
@@ -103,9 +103,9 @@ quabbin/
 │   ├── 08_profile.R       west-east valley cross-section
 │   ├── 09_losses.R        the "by the numbers" figure
 │   ├── 10_terrain3d.R     3D terrain view (base-R persp)
-│   ├── 11_preflood.R      process the 1893 USGS quad into the web overlay
+│   ├── 11_preflood.R      historical map overlays (1890s + 1940s) for the web map
 │   ├── 12_lidar.R         USGS 3DEP LiDAR of Dana Common & the Prescott Peninsula
-│   ├── 13_roads.R         the valley's 1893 road network, reservoir overlaid
+│   ├── 13_roads.R         the valley's 1890s road network, reservoir overlaid
 │   ├── 14_imprints.R      LiDAR imprint survey (MassGIS) + per-town survey figures
 │   ├── 15_xref.R          cross-reference: extracted 1893 roads vs the LiDAR traces
 │   ├── 16_reservoir.R     full-reservoir "LiDAR relief" coverage for the explorer
@@ -114,7 +114,7 @@ quabbin/
 │   ├── drowned_towns.csv  the four towns: location, county, charter & end dates
 │   └── town_population.csv real US Census counts 1900–1920 + peaks + 1938 dissolution
 ├── map/                   interactive imprint explorer (index.html + vendored Leaflet)
-│   └── data/              GeoJSON + 1893 overlay + LiDAR relief/imprint overlays (05–16)
+│   └── data/              GeoJSON + historical overlays (1890s/1940s) + LiDAR relief/imprint overlays
 └── output/                the rendered figures + GIF (committed)
 ```
 
@@ -180,10 +180,15 @@ never breaks the run — it degrades to a documented fallback instead.
   several vary by source and are shown with ranges.
 - **3D view** (`10_terrain3d.R`) — base-R `persp()` (no GPU required), with the
   reservoir drawn as a flat pool over the relief.
-- **Pre-reservoir map** (`11_preflood.R`) — the 1893 USGS Belchertown 15-minute
-  quadrangle (Historical Topographic Map Collection, public domain), reprojected
-  to EPSG:4326, cropped to the neatline, and exported as a JPEG + bounds for the
-  fade overlay in the interactive map.
+- **Historical map overlays** (`11_preflood.R`) — two eras of USGS topographic
+  survey (Historical Topographic Map Collection, public domain), each a mosaic of
+  the quadrangles that cover the valley (one 15' sheet only spans half of it):
+  the **1890s** (Belchertown 1893 + Barre 1894, 1:62,500) and the more-detailed
+  **1940s** (Winsor Dam + Quabbin Reservoir 1944, 1:31,680, mapped as the valley
+  was being taken). Each sheet is clipped to its neatline (dropping the collar and
+  forming a clean seam), the sheets are tonally harmonized so the join is seamless,
+  reprojected to EPSG:4326, cropped to the reservoir window and exported as a JPEG
+  + bounds. A `histmaps.json` manifest drives the explorer's year selector.
 - **LiDAR of the surviving sites** (`12_lidar.R`) — 1 m bare-earth LiDAR from the
   USGS 3DEP dynamic elevation service (public domain) for Dana Common and the
   Prescott Peninsula, the two areas above the full pool. A denoised low-sun
@@ -196,7 +201,8 @@ never breaks the run — it degrades to a documented fallback instead.
   penetrate water, and the conservative threshold under-flags rather than fills the
   frame with canopy noise.
 - **The valley's road network** (`13_roads.R`) — renders the real Swift River
-  Valley roads from the georeferenced 1893 USGS Belchertown quadrangle, with the
+  Valley roads from the georeferenced 1890s USGS survey (the Belchertown 1893 +
+  Barre 1894 mosaic, so the whole reservoir is covered), with the
   present reservoir overlaid in blue so you can see which roads and villages
   drowned. The four town centres are marked and the routes out to the surviving
   neighbours are labelled at the frame edges.
@@ -230,7 +236,7 @@ never breaks the run — it degrades to a documented fallback instead.
   mobile-first: a full-screen map, bottom-sheet **Layers** control, big touch targets,
   a full-width pool slider, and zoom to z19. It serves the full-reservoir **LiDAR relief**
   (above) as its primary layer, the auto-traced lines, "jump to" buttons (whole reservoir /
-  Prescott Center / Dana Common), the 1893 fade overlay, the drowned-town popups, the flood
+  Prescott Center / Dana Common), the historical map overlays (1890s/1940s, year-selectable), the drowned-town popups, the flood
   stages, and the aqueduct, over Esri World Hillshade + CARTO label tiles. The basemap tiles
   need internet; every layer the study itself produces is served locally.
 - **Full-reservoir "LiDAR relief"** (`16_reservoir.R`) — the explorer's headline layer.

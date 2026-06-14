@@ -1,0 +1,4 @@
+[
+  {"key":"1890s","label":"1890s survey","year":1893,"image":"hist_1890s.jpg","bounds":[[42.2500,-72.4600],[42.5000,-72.1800]],"source":"USGS 15' quadrangles: Belchertown 1893 + Barre 1894 (1:62,500)"},
+  {"key":"1940s","label":"1940s survey","year":1944,"image":"hist_1940s.jpg","bounds":[[42.2500,-72.3750],[42.5000,-72.2500]],"source":"USGS 7.5' quadrangles: Winsor Dam + Quabbin Reservoir 1944 (1:31,680)"}
+]

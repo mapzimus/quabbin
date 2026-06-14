@@ -60,7 +60,7 @@ extract_lines <- function(signed, thr, slope, slopemax, water, Nmin, Emin, Lmin)
 massgis_export_url <- function(bbox, mpp) {
   latm <- mean(c(bbox[2], bbox[4]))
   w <- round((bbox[3] - bbox[1]) * cos(latm * pi / 180) * 111320 / mpp); h <- round((bbox[4] - bbox[2]) * 111320 / mpp)
-  if (w * h > 4.0e6) { f <- sqrt(4.0e6 / (w * h)); w <- floor(w * f); h <- floor(h * f) }
+  if (w * h > 2.5e6) { f <- sqrt(2.5e6 / (w * h)); w <- floor(w * f); h <- floor(h * f) }  # ImageServer 500s above ~3 Mpx
   sprintf("%s?bbox=%f,%f,%f,%f&bboxSR=4326&size=%d,%d&imageSR=26986&format=tiff&pixelType=F32&interpolation=RSP_BilinearInterpolation&f=image",
           MG, bbox[1], bbox[2], bbox[3], bbox[4], w, h)
 }
