@@ -30,7 +30,10 @@ coordf <- coord_sf(crs = st_crs(CRS_MA), xlim = c(bb["xmin"], bb["xmax"]),
 reservoir_full <- st_make_valid(st_union(st_geometry(reservoir_ma)))
 area_full      <- as.numeric(st_area(reservoir_full))
 .fpv           <- terra::vect(st_sf(geometry = reservoir_full))
-.grid   <- terra::crop(dem_ma, terra::ext(.fpv), snap = "out")
+# Carve the synthetic bed on a fine 20 m grid (not the coarse regional DEM) so the
+# stage polygons are smooth, not blocky -- the depth model is purely geometric
+# (distance-to-shore), so it needs the footprint, not DEM elevations.
+.grid   <- terra::rast(terra::ext(.fpv), resolution = 20, crs = terra::crs(reservoir_ma))
 .inside <- terra::rasterize(.fpv, .grid, field = 1, background = NA)
 dshore  <- terra::mask(terra::distance(terra::ifel(is.na(.inside), 1, NA)), .fpv)  # metres to shore, inside only
 bed     <- POOL_M - (dshore / as.numeric(terra::global(dshore, "max", na.rm = TRUE))) * (150 * 0.3048)
@@ -102,7 +105,7 @@ stages <- do.call(rbind, lapply(seq_along(levels), function(i) {
         pct = round(as.numeric(st_area(g)) / area_full * 100),
         geometry = g)
 }))
-stages <- st_transform(st_simplify(stages, dTolerance = 35), CRS_LL)
+stages <- st_transform(st_simplify(stages, dTolerance = 8), CRS_LL)
 st_write(stages, file.path(DIR_WEB, "floodstages.geojson"), delete_dsn = TRUE, quiet = TRUE)
 msg("wrote map/data/floodstages.geojson (%d stages)", nrow(stages))
 

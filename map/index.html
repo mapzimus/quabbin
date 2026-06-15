@@ -156,9 +156,9 @@
 
 <div id="flood" class="card" title="Pool stages are schematic (synthetic bathymetry), not surveyed">
   <span class="lab">valley</span>
-  <input id="slider" type="range" min="1" max="14" value="14" step="1" aria-label="Reservoir pool level (schematic stages)">
+  <input id="slider" type="range" min="0" max="14" value="0" step="1" aria-label="Reservoir pool level (schematic stages)">
   <span class="lab">full</span>
-  <span class="read"><span id="readout">530 ft · 100%</span><small>schematic stages</small></span>
+  <span class="read"><span id="readout">dry valley · 0%</span><small>schematic stages</small></span>
   <button id="play" aria-label="Play filling animation">▶</button>
 </div>
 
@@ -221,7 +221,7 @@ Promise.all(["towns","reservoir","watershed","floodstages","aqueduct","infrastru
   if(reservoir) L.geoJSON(reservoir,{style:styles.reservoirOutline}).addTo(map);
   if(watershed) watershedLayer = L.geoJSON(watershed,{style:styles.watershed});
   if(floodstages){ floodFeatures = floodstages.features.sort((a,b)=>a.properties.stage-b.properties.stage);
-    const sl=document.getElementById("slider"); sl.max=floodFeatures.length; sl.value=floodFeatures.length; setStage(floodFeatures.length); }
+    const sl=document.getElementById("slider"); sl.min=0; sl.max=floodFeatures.length; sl.value=0; setStage(0); }
   if(aqueduct||infra){ aqueductGroup=L.layerGroup();
     if(aqueduct) L.geoJSON(aqueduct,{style:styles.aqueduct}).addTo(aqueductGroup);
     if(infra) L.geoJSON(infra,{pointToLayer:(f,ll)=>{const t=f.properties.type;
@@ -273,7 +273,9 @@ const JUMPS = [
 })();
 
 // ---- flood slider ----
-function setStage(stage){ const f=floodFeatures.find(x=>x.properties.stage===stage); if(!f) return;
+function setStage(stage){
+  if(stage<=0){ floodLayer.clearLayers(); document.getElementById("readout").textContent="dry valley · 0%"; return; }
+  const f=floodFeatures.find(x=>x.properties.stage===stage); if(!f) return;
   floodLayer.clearLayers().addData(f); const p=f.properties;
   document.getElementById("readout").textContent=`${p.pool_ft} ft · ${p.pct}%`+(stage===floodFeatures.length?" (1946)":""); }
 document.getElementById("slider").addEventListener("input",e=>setStage(+e.target.value));
