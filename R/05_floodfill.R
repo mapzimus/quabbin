@@ -5,14 +5,14 @@
 #   - output/floodfill_frames/f_##.png  (frames)
 #   - output/quabbin_floodfill.gif      (animation, via ImageMagick)
 #   - output/09_floodfill.png           (small-multiples panel)
-#   - map/data/floodstages.geojson      (per-stage water polygons for the web slider)
+# (Static figures only -- the explorer no longer has a schematic "filling"
+#  slider; it toggles the real full-pool reservoir extent instead.)
 # -------------------------------------------------------------------------
 
 if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() else file.path(getwd(), "quabbin")
 if (!exists("dem_ma")) source(file.path(QB_DIR, "R", "02_build_layers.R"))
 
 DIR_FRAMES <- file.path(DIR_OUTPUT, "floodfill_frames"); dir.create(DIR_FRAMES, showWarnings = FALSE)
-DIR_WEB    <- file.path(QB_DIR, "map", "data");          dir.create(DIR_WEB, recursive = TRUE, showWarnings = FALSE)
 
 # Grey relief base (shared by every frame)
 .agg <- function(r, maxc = 2.5e5) { n <- terra::ncell(r); if (n > maxc) r <- terra::aggregate(r, ceiling(sqrt(n / maxc))); r }
@@ -97,16 +97,9 @@ panel <- patchwork::wrap_plots(
     caption = "Each panel raises the pool another step toward the 530 ft full pool. Schematic synthetic bathymetry (the drowned valley floor isn't captured by modern DEMs).")
 save_map(panel, "09_floodfill.png", w = 12, h = 8)
 
-# --- Export per-stage polygons for the web slider -------------------------
-stages <- do.call(rbind, lapply(seq_along(levels), function(i) {
-  g <- water_list[[i]]
-  st_sf(stage = i,
-        pool_ft = round(levels[i] / 0.3048),
-        pct = round(as.numeric(st_area(g)) / area_full * 100),
-        geometry = g)
-}))
-stages <- st_transform(st_simplify(stages, dTolerance = 8), CRS_LL)
-st_write(stages, file.path(DIR_WEB, "floodstages.geojson"), delete_dsn = TRUE, quiet = TRUE)
-msg("wrote map/data/floodstages.geojson (%d stages)", nrow(stages))
+# (No per-stage web export: the explorer dropped the schematic "filling" slider
+# -- there is no real bathymetry for the drowned valley floor, so the in-between
+# stages were synthetic. The explorer now toggles the real full-pool reservoir
+# extent instead. This stage still renders the static GIF + panel above.)
 
 msg("floodfill stage complete")

@@ -1,15 +1,18 @@
 # Quabbin study — changelog
 
-## 2026-06-14 — Explorer flood layer: dry by default + smooth geometry
+## 2026-06-14 — Explorer: real reservoir-water toggle (dropped the schematic flood slider)
 
-- The schematic flood layer no longer fills on load. The explorer opens on the
-  **dry valley** (slider at 0%, "dry valley"), so the town centres and the LiDAR
-  imprints are visible — drag the slider to raise the pool. Previously it opened
-  at full pool, burying Greenwich and the rest under a schematic fill.
-- Regenerated the flood-stage polygons on a fine **20 m grid** with light (8 m)
-  simplification — they were carved on the coarse regional DEM and simplified at
-  35 m, which read as blocky/angular at zoom. The full-pool stage now traces the
-  MassGIS reservoir outline; intermediate stages are smooth. Panel + GIF rebuilt.
+- Removed the explorer's schematic "filling" slider entirely. There is no real
+  bathymetry for the drowned valley floor (modern DEMs/LiDAR only see today's
+  water *surface*), so the in-between pool stages were synthetic and read as
+  meaningless blocky shapes sitting on top of the town centres (a 7 % "pool" over
+  Greenwich village, etc.). Replaced with a clean **Reservoir water** toggle (off
+  by default) that fills the *real* MassGIS full-pool extent — flip between the
+  historical maps / LiDAR imprints and what is actually underwater. The explorer
+  opens dry. Dropped the now-unused `floodstages.geojson` web export.
+- The static figures keep the schematic *illustration* (clearly labelled): the
+  `09_floodfill` panel and `quabbin_floodfill.gif`, geometry refined onto a fine
+  20 m grid (was the coarse regional DEM + heavy simplification).
 
 ## 2026-06-14 — Full reservoir extent + historical map overlays
 
