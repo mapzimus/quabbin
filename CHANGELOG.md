@@ -1,21 +1,21 @@
-# Quabbin study — changelog
+# Quabbin study changelog
 
-## 2026-09-25 — Basemap swap (CARTO tiles now need a key) + audit tune-up
+## 2026-09-25: Basemap swap (CARTO tiles now need a key) + audit tune-up
 
-### Explorer basemap → MassGIS public tile services
-- CARTO's free raster basemaps started requiring an API key on 2026-09-23: keyless
-  requests still return HTTP 200, but every tile is stamped **"API KEY REQUIRED"**,
+### Explorer basemap: MassGIS public tile services
+- CARTO's free raster basemaps started requiring an API key on 2026-09-23. Keyless
+  requests still return HTTP 200, but every tile is stamped "API KEY REQUIRED",
   so the explorer's label layer and its "Plain map" base were watermarked edge to
-  edge. Esri's `server.arcgisonline.com` raster basemaps (the World Hillshade base)
-  are legacy services on a sunset track. All three basemap layers now come from
-  **MassGIS's public tile services** on ArcGIS Online — no key, no account, and the
-  same Commonwealth LiDAR the study is built on:
-  - **Shaded relief** base: `LiDAR_ShadedRelief` (statewide bare-earth LiDAR
-    hillshade, native to z18 — sharper than the old ~z16 Esri hillshade);
-  - labels: `MassGIS_Basemap_Detailed_Features` (roads with names, town/county
-    labels, transparent PNG, native to z18);
-  - **Topo map** (was "Plain map"): `MassGISBasemap` (contours, hydro, forest,
-    roads and labels, native to z19).
+  edge. Esri's `server.arcgisonline.com` raster basemaps (the World Hillshade
+  base) are legacy services on a sunset track. All three basemap layers now come
+  from MassGIS's public tile services on ArcGIS Online, with no key or account,
+  built from the same Commonwealth LiDAR the study uses:
+  - shaded relief base: `LiDAR_ShadedRelief` (statewide bare-earth LiDAR
+    hillshade, native to z18; the old Esri hillshade was native to about z16);
+  - labels: `MassGIS_Basemap_Detailed_Features` (roads with names, town and
+    county labels, transparent PNG, native to z18);
+  - Topo map (was "Plain map"): `MassGISBasemap` (contours, hydro, forest, roads
+    and labels, native to z19).
   A keyless fallback (USGS The National Map, `USGSTopo`, cached to z16) is noted
   in the source should these services ever move. Outside Massachusetts the relief
   base is blank; everything the explorer shows is inside the state.
@@ -25,26 +25,34 @@
   the source of truth) instead of the portfolio folder.
 
 ### Pipeline fixes (from the audit; scripts edited, not re-run here)
-- **Stale 1893-quad cache path** — `12_lidar.R`, `13_roads.R` (fallback),
+- Stale 1893-quad cache path: `12_lidar.R`, `13_roads.R` (fallback),
   `14_imprints.R` and `15_xref.R` all read `data/cache/preflood_belchertown_1893.tif`,
   a file nothing has written since `11_preflood.R` moved to the two-era mosaics
   (it caches the sheet as `htmc_MA_Belchertown_352469_1893_62500_geo_tif`). On a
-  fresh cache 12 silently dropped its 1893 panel (caption still promised it), 14
-  lost its ground-truth panel, and 15 would hard-error. All four now point at the
-  file 11 actually caches, and 15 skips with a message if it is absent.
-- `05_floodfill.R`: GIF assembly reported "wrote …" whenever a GIF existed on disk,
-  even when ImageMagick failed; the `ok` result was never read; and it shelled
-  out to `convert` (a filesystem tool on Windows). It now prefers IM7's `magick`,
-  checks the exit status, assembles to a temp file and only then replaces the
-  committed GIF.
-- `08_profile.R`: dropped a redundant `POOL_FT <- POOL_M / 0.3048` that overwrote
-  the `00_setup.R` constant with a float round-trip. `07_export_web.R`: header
-  no longer claims `floodstages.geojson` is written.
-- README reconciled: no more pool slider / flood stages / per-stage GeoJSON in the
-  explorer description; basemap paragraph rewritten; `png` and `curl` added to the
-  install line (used directly by `lidar_utils.R` / `15_xref.R` / the OSM path).
+  fresh cache 12 silently dropped its 1893 panel (the caption still promised it),
+  14 lost its ground-truth panel, and 15 would hard-error. All four now point at
+  the file 11 caches, and 15 skips with a message if it is absent.
+- `05_floodfill.R`: GIF assembly reported "wrote …" whenever a GIF existed on
+  disk, even when ImageMagick failed; the `ok` result was never read; and it
+  shelled out to `convert` (a filesystem tool on Windows). It now prefers IM7's
+  `magick`, checks the exit status, assembles to a temp file and only then
+  replaces the committed GIF.
+- `08_profile.R`: dropped a redundant `POOL_FT <- POOL_M / 0.3048` that
+  overwrote the `00_setup.R` constant with a float round-trip. `07_export_web.R`:
+  header no longer claims `floodstages.geojson` is written.
+- README reconciled: no more pool slider, flood stages or per-stage GeoJSON in
+  the explorer description; basemap paragraph rewritten; `png` and `curl` added
+  to the install line (used directly by `lidar_utils.R`, `15_xref.R` and the OSM
+  path).
 
-### Audit — open items (not changed in this round)
+### Prose pass
+- README, this changelog and the explorer's UI copy were edited for AI writing
+  patterns (em-dash clusters, decorative bold, colon reveals, "honest" / "heart
+  of" / "closes the loop" puffery). Every number, code span and link was checked
+  against the previous text and is unchanged. Figure captions inside the R
+  scripts were left alone: they are baked into the committed PNGs.
+
+### Audit: open items (not changed in this round)
 - `14_imprints.R` rebuilds `imprints.json` from whatever `.bounds_*` sidecars
   exist, so regenerating one area on a fresh clone shrinks the manifest to that
   area; `16_reservoir.R` likewise overwrites `reservoir_ghost.json` with any
@@ -58,85 +66,85 @@
   from it; `02_build_layers.R` duplicates `massgis_export` from `lidar_utils.R`.
 - `12_lidar.R`'s 3DEP download has no completeness check (a truncated body is
   cached forever); reuse the `file.size > 1e5` test from `massgis_export`.
-- The 2026-06-14 entry below says a "build guard refuses to commit" on a coarse-DEM
-  fallback; `02_build_layers.R` only logs it.
+- The 2026-06-14 entry below says a "build guard refuses to commit" on a
+  coarse-DEM fallback; `02_build_layers.R` only logs it.
 - `map/index.html` sets `user-scalable=no`, which blocks pinch-zooming the UI text.
 
 ### Verification
 - Headless Chromium against `map/`: 0 page errors, 0 failed requests, every
   basemap tile 200 from `tiles.arcgis.com`; screenshots checked at the home view,
-  the topo base, and Prescott Center with LiDAR relief + traces + 1890s overlay.
-  Inline JS passes `node --check`. Before the swap the same run showed the CARTO
-  "API KEY REQUIRED" watermark tiled across the map.
+  the topo base, and Prescott Center with LiDAR relief, traces and the 1890s
+  overlay. Inline JS passes `node --check`. Before the swap the same run showed
+  the CARTO "API KEY REQUIRED" watermark tiled across the map.
 - All 19 R files parse, and the new GIF block was exercised with a stub
   ImageMagick on both the success and failure paths (the failure path leaves the
   committed GIF untouched). The full pipeline was not re-run (no spatial stack in
   the container); none of the explorer's committed data changed.
 
-## 2026-06-14 — Explorer: real reservoir-water toggle (dropped the schematic flood slider)
+## 2026-06-14: Explorer gets a real reservoir-water toggle (schematic flood slider dropped)
 
-- Removed the explorer's schematic "filling" slider entirely. There is no real
-  bathymetry for the drowned valley floor (modern DEMs/LiDAR only see today's
-  water *surface*), so the in-between pool stages were synthetic and read as
-  meaningless blocky shapes sitting on top of the town centres (a 7 % "pool" over
-  Greenwich village, etc.). Replaced with a clean **Reservoir water** toggle (off
-  by default) that fills the *real* MassGIS full-pool extent — flip between the
-  historical maps / LiDAR imprints and what is actually underwater. The explorer
-  opens dry. Dropped the now-unused `floodstages.geojson` web export.
-- The static figures keep the schematic *illustration* (clearly labelled): the
+- Removed the explorer's schematic "filling" slider. There is no real bathymetry
+  for the drowned valley floor (modern DEMs and LiDAR only see today's water
+  surface), so the in-between pool stages were synthetic and read as meaningless
+  blocky shapes sitting on top of the town centres (a 7 % "pool" over Greenwich
+  village, etc.). Replaced with a Reservoir water toggle (off by default) that
+  fills the real MassGIS full-pool extent, so you can flip between the historical
+  maps or LiDAR imprints and what is actually underwater. The explorer opens dry.
+  Dropped the now-unused `floodstages.geojson` web export.
+- The static figures keep the schematic illustration (clearly labelled): the
   `09_floodfill` panel and `quabbin_floodfill.gif`, geometry refined onto a fine
-  20 m grid (was the coarse regional DEM + heavy simplification).
+  20 m grid (was the coarse regional DEM plus heavy simplification).
 
-## 2026-06-14 — Full reservoir extent + historical map overlays
+## 2026-06-14: Full reservoir extent + historical map overlays
 
 Two threads, applied across the whole project (static figures, web GeoJSON, and
 the interactive explorer).
 
 ### Full reservoir extent
-- The MassGIS LiDAR reservoir was being fetched over a box that **clipped the
-  reservoir's NE arm** (lat 42.465 / lon -72.275); the northeast (toward Dana and
+- The MassGIS LiDAR reservoir was being fetched over a box that clipped the
+  reservoir's NE arm (lat 42.465 / lon -72.275); the northeast (toward Dana and
   the northern inlets) was cut off flat. Expanded the fetch box to fully contain
-  Quabbin — reservoir area now ~101 km² (was ~74), the real surface.
+  Quabbin. Reservoir area is now ~101 km² (was ~74), the real surface.
 - That bigger request exceeded the ImageServer's ~3 Mpx export cap (HTTP 500), so
-  the fetch is now **adaptively sized** (and `lidar_utils` clamps to 2.5 Mpx). A
+  the fetch is now adaptively sized (and `lidar_utils` clamps to 2.5 Mpx). A
   build guard refuses to commit if MassGIS silently falls back to the coarse-DEM
   carve. Nudged the AOI north so the framed maps have margin above the water.
 - Re-rendered every reservoir-bearing figure (locator, hillshade, towns,
   watershed, erasure, hero, aqueduct, cross-section, 3D, roads) and re-exported
-  `map/data/reservoir.geojson`. Re-tiled the explorer's full-reservoir **LiDAR
-  relief** coverage (`16_reservoir.R`) to the new extent (30 tiles).
+  `map/data/reservoir.geojson`. Re-tiled the explorer's full-reservoir LiDAR
+  relief coverage (`16_reservoir.R`) to the new extent (30 tiles).
 
 ### Historical map overlays (explorer)
-- The single, cut-off 1893 Belchertown quad is replaced by **two full-valley
-  eras** with a year selector in the explorer: **1890s** (Belchertown 1893 + Barre
-  1894, 1:62,500) and **1940s** (Winsor Dam + Quabbin Reservoir 1944, 1:31,680 —
-  twice the detail, the valley as it was being taken). One 15' sheet only covers
-  half the valley, so each era is a two-sheet mosaic, clipped to neatlines and
-  tonally harmonized at the seam (`11_preflood.R` → `histmaps.json`).
+- The single, cut-off 1893 Belchertown quad is replaced by two full-valley eras
+  with a year selector in the explorer: 1890s (Belchertown 1893 + Barre 1894,
+  1:62,500) and 1940s (Winsor Dam + Quabbin Reservoir 1944, 1:31,680, twice the
+  detail, the valley as it was being taken). One 15' sheet only covers half the
+  valley, so each era is a two-sheet mosaic, clipped to neatlines and tonally
+  harmonized at the seam (`11_preflood.R` → `histmaps.json`).
 - `13_roads.R` now draws on the 1890s mosaic with a frame that spans the whole
   reservoir, so `16_roads.png` no longer clips the NE arm or runs off the base map.
 
-## 2026-06-14 — Dam-containment fix + locator redesign
+## 2026-06-14: Dam-containment fix + locator redesign
 
 Two cleanup items on the regenerated figures.
 
 ### Reservoir no longer spills below the dams
 The reservoir footprint is built in `R/02_build_layers.R` from MassGIS 1 m LiDAR
 (downsampled to 10 m). At 10 m the dams don't fully seal, so the "largest patch
-below the 530 ft pool" still pulled in ~2 sq km of below-dam ground — water drawn
+below the 530 ft pool" still pulled in ~2 sq km of below-dam ground: water drawn
 south of Winsor Dam / Goodnough Dike onto Belchertown/Ware. This had leaked into
 every figure that draws the reservoir and into the web explorer's
 `reservoir.geojson`.
 
-- `02_build_layers.R`: after extraction, the footprint is now **clipped at the
-  dam line** (Winsor Dam 42.2967 N, Goodnough Dike 42.2920 N) — the dams are the
-  true southern boundary. Spill dropped from ~2.2 km² to ~0; southern shore now
-  sits at the dams (lat 42.296). The fix applies to whichever branch built the
-  footprint (LiDAR / coarse-DEM / OSM).
+- `02_build_layers.R`: after extraction, the footprint is now clipped at the
+  dam line (Winsor Dam 42.2967 N, Goodnough Dike 42.2920 N), since the dams are
+  the true southern boundary. Spill dropped from ~2.2 km² to ~0; the southern
+  shore now sits at the dams (lat 42.296). The fix applies to whichever branch
+  built the footprint (LiDAR / coarse-DEM / OSM).
 - Regenerated every reservoir-bearing artifact from the dam-contained footprint:
   figures `01–05`, `08`, `09` (+ flood GIF), `10`, `11`, `13`, `16`, and the web
   exports `reservoir.geojson` and `floodstages.geojson`. The heavy LiDAR stages
-  (`12`,`14`,`15`,`16_reservoir`) were left untouched — they derive water
+  (`12`,`14`,`15`,`16_reservoir`) were left untouched; they derive water
   per-pixel from their own LiDAR DEMs and never used the carve.
 
 ### Locator redesigned (`01_locator.png`)
@@ -144,34 +152,34 @@ Replaced the flat grey-state-with-a-red-box locator with a composite: the valley
 in shaded relief (the subject), with the four town sites, and a small
 Massachusetts "you are here" chip marking Quabbin and Boston.
 
-## 2026-06-12 — Standalone-repo closeout
+## 2026-06-12: Standalone-repo closeout
 
 The study moved into its own repository ([`mapzimus/quabbin`](https://github.com/mapzimus/quabbin)),
 split from the portfolio repo with history preserved. Final tidy for the split:
 
 - README and `run_all.R` run instructions no longer assume the old `quabbin/`
-  subfolder layout — paths are now relative to the study folder, so the same
+  subfolder layout. Paths are now relative to the study folder, so the same
   text is correct in both the standalone repo and the portfolio copy.
-- **MIT license** added (code only; the data sources are U.S. public domain,
+- MIT license added (code only; the data sources are U.S. public domain,
   credited in the README).
-- New README section **"Where this lives"** documents the two-copy workflow:
+- New README section "Where this lives" documents the two-copy workflow:
   the standalone repo is the source of truth; the portfolio's `quabbin/`
   folder is the deployed copy that serves the live page and explorer.
 - GitHub repo metadata filled in: description, topics, homepage.
 
-## 2026-06-10 — UX, accessibility & code-quality round (multi-agent)
+## 2026-06-10: UX, accessibility & code-quality round (multi-agent)
 
-A parallel polish pass (three workers on disjoint files + an overseer audit),
-verified independently. No rendered figures or web data were regenerated — only
+A parallel polish pass (three workers on disjoint files plus an overseer audit),
+verified independently. No rendered figures or web data were regenerated; only
 source, markup, and docs changed (12 files, ~+186/−173, plus this changelog).
 
 ### Explorer (`map/index.html`)
 - Loading indicator while LiDAR/overlay imagery streams in (the LiDAR relief layer
   is ~37 MB); overlays confirmed to fetch only when a layer is first enabled.
-- LiDAR relief **opacity slider** (shown while the layer is on; drives all tiles).
-- **Scale bar** (metric + imperial; hidden on mobile so it can't collide with the
+- LiDAR relief opacity slider (shown while the layer is on; drives all tiles).
+- Scale bar (metric + imperial; hidden on mobile so it can't collide with the
   flood bar) and a `LiDAR: MassGIS` attribution.
-- Honesty: a "schematic stages" label + tooltip on the reservoir-filling slider.
+- A "schematic stages" label and tooltip on the reservoir-filling slider.
 - About copy now leads with LiDAR relief and names MassGIS 1 m bare-earth LiDAR;
   trace legend states the actual colours (roads/paths orange, stone walls teal).
 - Accessibility: `aria-pressed` synced on the About/Layers toggles; play/pause
@@ -179,14 +187,14 @@ source, markup, and docs changed (12 files, ~+186/−173, plus this changelog).
   mobile sheet; transitions/spinner gated behind `prefers-reduced-motion`.
 
 ### Project page (`quabbin.html`, `js/projects.js`)
-- New section **"What survives in the ground"** (between the animation and the gallery):
+- New section "What survives in the ground" (between the animation and the gallery):
   a short, factual explainer with the Prescott 1893-vs-LiDAR triptych and a CTA
   into the explorer.
 - Hero tightened (6→5 paragraphs) with the LiDAR relief explorer as the headline;
   flood-fill section relabelled and reworded as a schematic illustration, not
   surveyed bathymetry; "MassGIS LiDAR" added to the tech pills.
-- Gallery image render gets lazy-loading + meaningful `alt`; lightbox controls got
-  `aria-label`s. Meta/`og:description` and the `projects.js` card refreshed
+- Gallery image render gets lazy-loading and meaningful `alt`; lightbox controls
+  got `aria-label`s. Meta/`og:description` and the `projects.js` card refreshed
   (20 figures; MassGIS LiDAR; schematic animation; "LiDAR imprint explorer").
 
 ### Pipeline (`R/`)
@@ -199,7 +207,7 @@ source, markup, and docs changed (12 files, ~+186/−173, plus this changelog).
 
 ### Fixed
 - `14_imprints.R`: no longer clobbers `map/data/imprints.json` to `[]` on a fresh
-  clone (when the git-ignored `.bounds_*` sidecars are absent) — the committed
+  clone (when the git-ignored `.bounds_*` sidecars are absent); the committed
   manifest is preserved when there are no new entries.
 - `16_reservoir.R`: added a stage-level cache guard (skips when the manifest and all
   its overlay PNGs exist; delete `reservoir_ghost.json` to force a rebuild) and now
@@ -210,8 +218,8 @@ source, markup, and docs changed (12 files, ~+186/−173, plus this changelog).
 - All 17 R stages + `run_all.R` + `lidar_utils.R` parse; inline JS of both pages and
   `projects.js` pass `node --check`.
 - Behaviour-equivalence harness for the de-duplicated helpers: old definitions
-  (extracted verbatim from git) vs the new shared helpers on synthetic rasters —
-  identical outputs, byte-identical export URLs (24/24).
+  (extracted verbatim from git) vs the new shared helpers on synthetic rasters.
+  Identical outputs, byte-identical export URLs (24/24).
 - Headless Chromium on both pages: 0 page errors, all local requests 200; explorer
   layers/opacity/flood/jump-to exercised; gallery renders 20 images.
 
@@ -222,12 +230,11 @@ source, markup, and docs changed (12 files, ~+186/−173, plus this changelog).
   interactive map (#18); cross-section, by-the-numbers, 3D, 1893 overlay (#19).
 - Read-through audit: render-safe figure text, neutral tone, accurate distances (#21).
 - LiDAR of the surviving sites + the 1893 road network (#22, #23).
-- LiDAR **imprint survey** of the four towns + the mobile-first imprint explorer (#23).
+- LiDAR imprint survey of the four towns + the mobile-first imprint explorer (#23).
 - Explorer map fixes: zoom-in limit, control/panel overlaps, sharper peninsula (#24).
-- Full-reservoir **LiDAR relief** coverage for the explorer (#26).
-- Reservoir derived from MassGIS LiDAR — **dam-contained**, no longer spilling past
+- Full-reservoir LiDAR relief coverage for the explorer (#26).
+- Reservoir derived from MassGIS LiDAR, dam-contained, no longer spilling past
   the dams onto Belchertown/Ware (#28).
 - Ground-truth cross-reference (1893 roads vs. LiDAR traces) (#25/#28 era).
-- **Schematic bathymetry** reservoir-filling animation (gradual, captioned) (#31).
+- Schematic bathymetry reservoir-filling animation (gradual, captioned) (#31).
 - Closeout cleanup: orphaned overlays + dead code removed (#32).
-</content>

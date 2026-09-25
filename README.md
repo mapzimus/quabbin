@@ -1,13 +1,13 @@
 # The Quabbin Reservoir and the Lost Towns of the Swift River Valley
 
-A reproducible **R** GIS study of the Quabbin Reservoir, Massachusetts, created
-between 1938 and 1946 by damming and flooding the Swift River Valley. Four towns
-— **Dana, Enfield, Greenwich, and Prescott** — were disincorporated on 28 April
-1938 and about 2,500 residents were relocated; the reservoir supplies
-metropolitan Boston, roughly 105 km (65 miles) to the east.
+A reproducible R GIS study of the Quabbin Reservoir, Massachusetts, created
+between 1938 and 1946 by damming and flooding the Swift River Valley. Four towns,
+Dana, Enfield, Greenwich, and Prescott, were disincorporated on 28 April 1938 and
+about 2,500 residents were relocated. The reservoir supplies metropolitan Boston,
+roughly 105 km (65 miles) to the east.
 
-It is a *multi-layer study*: several spatial layers that, read together, describe
-how the reservoir was sited and what it replaced — a valley whose terrain forms a
+It is a multi-layer study. Several spatial layers, read together, describe how
+the reservoir was sited and what it replaced: a valley whose terrain forms a
 natural basin, four towns that had been losing population for decades, and a
 present-day map in which their land has been absorbed by the surrounding towns.
 
@@ -38,14 +38,15 @@ present-day map in which their land has been absorbed by the surrounding towns.
 | 19 | `24_dana_survey.png` | Dana Common: the surviving common/ridge vs. the drowned village | MassGIS 1 m LiDAR + 1893 quad |
 | 20 | `25_prescott_xref.png` | Ground-truth: the 1893 road network extracted and cross-referenced against the LiDAR traces | MassGIS LiDAR + 1893 quad |
 
-Plus a schematic **reservoir-filling animation** (`quabbin_floodfill.gif`) and an
-**interactive LiDAR imprint explorer** in [`map/`](map/) (mobile-first Leaflet):
-a **"LiDAR relief"** layer covering the *whole* reservoir in bare-earth LiDAR —
-pan and zoom across every acre the reservoir spared to hunt the relict **streets,
-house-lot outlines and cellar-hole pits** of the drowned villages still imprinted
-in the ground (crisp 1 m tiles at the surviving village sites). Toggle the
-auto-traced lines and the historical ground-truth surveys (1890s and 1940s),
-flood the valley with the reservoir's real extent, and follow the aqueduct east to Boston.
+Plus a schematic reservoir-filling animation (`quabbin_floodfill.gif`) and an
+interactive LiDAR imprint explorer in [`map/`](map/) (mobile-first Leaflet).
+Its "LiDAR relief" layer covers the whole reservoir in bare-earth LiDAR, so you
+can pan and zoom across every acre the reservoir spared and hunt the relict
+streets, house-lot outlines and cellar-hole pits of the drowned villages still
+imprinted in the ground (crisp 1 m tiles at the surviving village sites). Toggle
+the auto-traced lines and the historical ground-truth surveys (1890s and 1940s),
+flood the valley with the reservoir's real extent, and follow the aqueduct east
+to Boston.
 
 ![Filling the reservoir](output/quabbin_floodfill.gif)
 
@@ -66,24 +67,23 @@ Then, from the study folder:
 Rscript run_all.R
 ```
 
-(`run_all.R` locates its own folder, so it also works from anywhere —
+(`run_all.R` locates its own folder, so it also works from anywhere,
 e.g. `Rscript path/to/run_all.R`.)
 
-Downloads are cached under `data/cache/` (git-ignored), so the first
-run takes a few minutes and every run after that is ~90 seconds — except the
+Downloads are cached under `data/cache/` (git-ignored), so the first run takes a
+few minutes and every run after that about 90 seconds. The exceptions are the
 LiDAR stages (14–16), which mosaic the Prescott Peninsula and tile the whole
-reservoir, and are cache-guarded: their first build takes several minutes,
-then later runs skip any area whose `output/24_*_survey.png` (or
+reservoir. They are cache-guarded: the first build takes several minutes, then
+later runs skip any area whose `output/24_*_survey.png` (or
 `25_prescott_xref.png`) already exists, and stage 16 skips entirely while
-`map/data/reservoir_ghost.json` and every overlay it lists are present
-(delete a figure — or `reservoir_ghost.json` — to force a rebuild). The
-twenty figures and the GIF land in `output/`; the web-map
-GeoJSON, the historical map overlays, and the LiDAR relief/imprint overlays land in
-`map/data/`. (The GIF needs
-ImageMagick — `apt-get install imagemagick`; without it the pipeline still
-produces the panel `09`.)
+`map/data/reservoir_ghost.json` and every overlay it lists are present. Delete a
+figure, or `reservoir_ghost.json`, to force a rebuild. The twenty figures and the
+GIF land in `output/`; the web-map GeoJSON, the historical map overlays, and the
+LiDAR relief/imprint overlays land in `map/data/`. The GIF needs ImageMagick
+(`apt-get install imagemagick`); without it the pipeline still produces the
+panel `09`.
 
-The interactive map is static files — serve `map/` over HTTP, e.g.
+The interactive map is static files: serve `map/` over HTTP, e.g.
 `python3 -m http.server --directory map`, then open `localhost:8000`.
 
 ## How it is built
@@ -119,148 +119,156 @@ quabbin/
 ```
 
 Every network fetch in `01_fetch_data.R` is wrapped so one unreachable service
-never breaks the run — it degrades to a documented fallback instead.
+never breaks the run; it degrades to a documented fallback instead.
 
-## Data, methods, and honest caveats
+## Data, methods, and caveats
 
-- **Elevation** — AWS Terrain Tiles (SRTM/USGS, public domain) via
+- **Elevation**: AWS Terrain Tiles (SRTM/USGS, public domain) via
   `elevatr::get_elev_raster(z = 11)`, reprojected to NAD83 / Massachusetts
   Mainland (EPSG:26986) and hillshaded with `terra`.
-- **Reservoir** — derived from **MassGIS 1 m LiDAR** (downsampled to 10 m): the
-  largest contiguous area at/below the 530-ft full pool. The LiDAR resolves the
-  terrain far better than the coarse regional DEM, but at 10 m even it still leaks
-  ~2 sq km of below-dam ground into the largest patch (the dams don't perfectly
-  seal), so the footprint is then **clipped at the Winsor Dam / Goodnough Dike
-  line** — the dams are the reservoir's true southern boundary — and the water no
-  longer spills south past the dams onto Belchertown/Ware (an earlier artifact
-  that had leaked into the gallery). If MassGIS is unreachable it falls back to the coarse-DEM carve
-  (largest polygon below the pool), and an OpenStreetMap shoreline path
-  (`RESERVOIR_METHOD <- "osm"`) is also available but opt-in (Overpass rate-limits
-  cloud IPs).
-- **Watershed** — USGS Watershed Boundary Dataset HUC-10 units (public domain),
-  queried live from the National Map ArcGIS service. **These are deliberately
-  shown as regional context, not as the catchment boundary:** the dissolved
-  HUC-10s are several times larger than the ~120 sq mi DCR-defined Quabbin
-  watershed (a MassGIS layer that was not reachable here). The map says so.
-- **Modern municipalities** — US Census TIGER county subdivisions (2021,
-  public domain) via `tigris`.
-- **The four towns** — there is no clean, freely downloadable historic GIS
-  boundary for towns abolished in 1938, so they are plotted as labeled points
-  at their historic centers (coordinates from the towns' Wikipedia pages).
-- **Population** — real decennial **U.S. Census** counts for all four towns, read
+- **Reservoir**: derived from MassGIS 1 m LiDAR (downsampled to 10 m) as the
+  largest contiguous area at or below the 530-ft full pool. The LiDAR resolves the
+  terrain far better than the coarse regional DEM, but at 10 m even it leaks
+  about 2 sq km of below-dam ground into the largest patch, because the dams
+  don't perfectly seal. The footprint is therefore clipped at the Winsor Dam /
+  Goodnough Dike line, the reservoir's true southern boundary, so the water no
+  longer spills south past the dams onto Belchertown and Ware (an earlier
+  artifact that had leaked into the gallery). If MassGIS is unreachable it falls
+  back to the coarse-DEM carve (largest polygon below the pool). An OpenStreetMap
+  shoreline path (`RESERVOIR_METHOD <- "osm"`) is also available but opt-in,
+  because Overpass rate-limits cloud IPs.
+- **Watershed**: USGS Watershed Boundary Dataset HUC-10 units (public domain),
+  queried live from the National Map ArcGIS service. These are shown as regional
+  context, not as the catchment boundary: the dissolved HUC-10s are several times
+  larger than the ~120 sq mi DCR-defined Quabbin watershed (a MassGIS layer that
+  was not reachable here). The map says so.
+- **Modern municipalities**: US Census TIGER county subdivisions (2021, public
+  domain) via `tigris`.
+- **The four towns**: there is no clean, freely downloadable historic GIS
+  boundary for towns abolished in 1938, so they are plotted as labeled points at
+  their historic centers (coordinates from the towns' Wikipedia pages).
+- **Population**: real decennial U.S. Census counts for all four towns, read
   straight from the 1920 *Number of Inhabitants, Massachusetts* bulletin (Table 2,
-  public domain), via OCR + a hand check of the scanned page: for 1900 / 1910 /
-  1920, Dana 790 → 736 → 599, Enfield 1,036 → 874 → 790, Greenwich 491 → 452 →
+  public domain), via OCR plus a hand check of the scanned page. For 1900 / 1910 /
+  1920: Dana 790 → 736 → 599, Enfield 1,036 → 874 → 790, Greenwich 491 → 452 →
   309, Prescott 380 → 320 → 236. Every town was already shrinking before the
   reservoir. Earlier peaks (Enfield ~1,100 in 1850, Prescott ~750 in 1830) and
   the 1938 dissolution (~2,500 displaced in all) are shown as annotated context,
-  not plotted as census points. All four disincorporated **28 April 1938**.
-- **Reservoir-filling animation** — `05_floodfill.R`, explicitly **schematic**.
-  Modern DEMs (AWS Terrain and LiDAR alike) capture only today's water surface
-  (~530 ft), **not the drowned valley floor**, so a true elevation-based fill is
-  impossible. Instead the basin is modeled synthetically: depth grows with
-  distance from the shoreline (the broad main basin deepest, the narrow arms
-  shallow), scaled to the reservoir's surveyed **~150 ft maximum depth**; the pool
-  then rises over that synthetic bed in **equal-area stages**, filling the deep
-  central channel first and spreading to the arms (≈7 % → 100 %). Frames become a
-  GIF (ImageMagick) and a small-multiples panel. It is a schematic of *how* the basin filled (1939–1946), **not surveyed
-  bathymetry** — captioned as such.
-- **Aqueduct & dams** — the route (Quabbin → Wachusett → Boston) and the dams
-  (Winsor Dam, Goodnough Dike) are **hand-placed from known coordinates** and
-  labeled schematic; they convey the ~105 km eastward course of the water, not a
-  surveyed alignment.
-- **Cross-section** (`08_profile.R`) — a west-east transect of the DEM at the
-  reservoir's widest point. The DEM retains sub-pool relief of the drowned valley,
-  but its underwater values are approximate, so the figure cites the surveyed
-  maximum depth (~150 ft) rather than asserting DEM depths.
-- **By the numbers** (`09_losses.R`) — documented quantities (surface area,
+  not plotted as census points. All four disincorporated 28 April 1938.
+- **Reservoir-filling animation** (`05_floodfill.R`): schematic. Modern DEMs
+  (AWS Terrain and LiDAR alike) capture only today's water surface (~530 ft),
+  not the drowned valley floor, so a true elevation-based fill is impossible.
+  Instead the basin is modeled synthetically: depth grows with distance from the
+  shoreline (the broad main basin deepest, the narrow arms shallow), scaled to
+  the reservoir's surveyed ~150 ft maximum depth; the pool then rises over that
+  synthetic bed in equal-area stages, filling the deep central channel first and
+  spreading to the arms (≈7 % → 100 %). Frames become a GIF (ImageMagick) and a
+  small-multiples panel. It is a schematic of how the basin filled (1939–1946),
+  not surveyed bathymetry, and is captioned as such.
+- **Aqueduct & dams**: the route (Quabbin → Wachusett → Boston) and the dams
+  (Winsor Dam, Goodnough Dike) are hand-placed from known coordinates and labeled
+  schematic; they convey the ~105 km eastward course of the water, not a surveyed
+  alignment.
+- **Cross-section** (`08_profile.R`): a west-east transect of the DEM at the
+  reservoir's widest point. The DEM retains sub-pool relief of the drowned
+  valley, but its underwater values are approximate, so the figure cites the
+  surveyed maximum depth (~150 ft) rather than asserting DEM depths.
+- **By the numbers** (`09_losses.R`): documented quantities (surface area,
   volume, shoreline, displaced residents, relocated graves, buildings razed,
   people supplied) compiled from MWRA, Massachusetts DCR, and regional histories;
   several vary by source and are shown with ranges.
-- **3D view** (`10_terrain3d.R`) — base-R `persp()` (no GPU required), with the
+- **3D view** (`10_terrain3d.R`): base-R `persp()` (no GPU required), with the
   reservoir drawn as a flat pool over the relief.
-- **Historical map overlays** (`11_preflood.R`) — two eras of USGS topographic
+- **Historical map overlays** (`11_preflood.R`): two eras of USGS topographic
   survey (Historical Topographic Map Collection, public domain), each a mosaic of
-  the quadrangles that cover the valley (one 15' sheet only spans half of it):
-  the **1890s** (Belchertown 1893 + Barre 1894, 1:62,500) and the more-detailed
-  **1940s** (Winsor Dam + Quabbin Reservoir 1944, 1:31,680, mapped as the valley
-  was being taken). Each sheet is clipped to its neatline (dropping the collar and
-  forming a clean seam), the sheets are tonally harmonized so the join is seamless,
-  reprojected to EPSG:4326, cropped to the reservoir window and exported as a JPEG
-  + bounds. A `histmaps.json` manifest drives the explorer's year selector.
-- **LiDAR of the surviving sites** (`12_lidar.R`) — 1 m bare-earth LiDAR from the
+  the quadrangles that cover the valley, since one 15' sheet only spans half of
+  it. The 1890s era is Belchertown 1893 + Barre 1894 (1:62,500); the 1940s era is
+  Winsor Dam + Quabbin Reservoir 1944 (1:31,680), more detailed and mapped as the
+  valley was being taken. Each sheet is clipped to its neatline (dropping the
+  collar and forming a clean seam), the sheets are tonally harmonized so the join
+  is seamless, reprojected to EPSG:4326, cropped to the reservoir window and
+  exported as a JPEG plus bounds. A `histmaps.json` manifest drives the
+  explorer's year selector.
+- **LiDAR of the surviving sites** (`12_lidar.R`): 1 m bare-earth LiDAR from the
   USGS 3DEP dynamic elevation service (public domain) for Dana Common and the
   Prescott Peninsula, the two areas above the full pool. A denoised low-sun
   hillshade carries the terrain; a local relief model (elevation minus its local
-  mean) then flags genuine depressions deeper than ~0.5 m — cellar holes and road
-  cuts — in red, with a slope mask so natural gullies on the flanks aren't false-
-  flagged. Paired with the 1893 quad as static then-&-now figures (the explorer's
-  relief now comes from the full-reservoir LiDAR relief layer, `16_reservoir.R`).
-  Submerged areas are not shown: the buildings were demolished and LiDAR cannot
-  penetrate water, and the conservative threshold under-flags rather than fills the
-  frame with canopy noise.
-- **The valley's road network** (`13_roads.R`) — renders the real Swift River
+  mean) then flags genuine depressions deeper than ~0.5 m, cellar holes and road
+  cuts, in red, with a slope mask so natural gullies on the flanks aren't
+  false-flagged. Paired with the 1893 quad as static then-and-now figures (the
+  explorer's relief now comes from the full-reservoir LiDAR relief layer,
+  `16_reservoir.R`). Submerged areas are not shown: the buildings were demolished
+  and LiDAR cannot penetrate water, and the conservative threshold under-flags
+  rather than fills the frame with canopy noise.
+- **The valley's road network** (`13_roads.R`): renders the real Swift River
   Valley roads from the georeferenced 1890s USGS survey (the Belchertown 1893 +
-  Barre 1894 mosaic, so the whole reservoir is covered), with the
-  present reservoir overlaid in blue so you can see which roads and villages
-  drowned. The four town centres are marked and the routes out to the surviving
-  neighbours are labelled at the frame edges.
-- **The LiDAR imprint survey** (`14_imprints.R`) — the heart of the relict-landscape
-  work. For the dry land that survives in each town it pulls **MassGIS 1 m bare-earth
-  LiDAR** (the 2013–2021 statewide DEM ImageServer, public domain; native NAD83 / MA
-  metres, cleaner than the 3DEP seamless used in `12_lidar.R`) and renders a
-  **composite relief** — an 8-direction hillshade emphasised by a Local Relief Model
-  — that makes faint linear features read. It then **auto-traces** the relict network:
-  elongated *negative* relief (sunken roadbeds, cart paths) and elongated *positive*
-  relief (banks, stone walls), keeping only long, straight connected components on
-  gentle ground so blobs and slope noise are dropped. Every panel is ground-truthed
-  against the 1893 quad. Findings, honestly: **Prescott** is the richest (a clear road
-  plus many lineations); **Enfield**'s dry south (toward Winsor Dam) keeps road traces;
-  **Dana**'s common/ridge keeps a road cut; **Greenwich**'s center is *entirely* under
-  water (a static "what drowned" panel, no imprints). The auto-trace is a **candidate**
-  finder — it cannot perfectly separate man-made lines from natural slope features, so
-  the relief itself is the primary evidence and the traces are an explorable overlay.
-  This is, as far as we found, a gap in the public record: the lost-town history is
-  well documented (J.R. Greene's *Atlas of the Quabbin Valley*; the Swift River Valley
-  Historical Society) and LiDAR for New England relict landscapes is proven (UConn's
-  Ouimet Lab; Johnson & Ouimet 2014), but not combined into a LiDAR imprint survey of
-  the four towns. The Prescott Peninsula runs ~12 km — beyond the server's single-export
-  cap — so it is mosaicked from three ~2 m strips into one DEM for full-length coverage;
-  the stage is cache-guarded (skips any area whose survey figure — and, for web areas,
-  trace overlay — already exists), so only the first build pays the render cost. Exported
-  as static survey figures (`output/24_*`) and as auto-trace web overlays (transparent
-  over water) with bounds in `map/data/imprints.json`; the explorer's relief itself comes
-  from the full-reservoir LiDAR relief layer (`16_reservoir.R`).
-- **Interactive imprint explorer** — Leaflet (vendored locally, no CDN dependency),
-  mobile-first: a full-screen map, bottom-sheet **Layers** control, big touch targets,
-  and zoom to z19. It serves the full-reservoir **LiDAR relief** (above) as its primary
-  layer, the auto-traced lines, "jump to" buttons (whole reservoir / Prescott Center /
-  Dana Common), the historical map overlays (1890s/1940s, year-selectable), the
-  drowned-town popups, the reservoir-water toggle, and the aqueduct, over **MassGIS public
-  tile services** — the statewide LiDAR shaded relief with MassGIS road/town labels, or the
-  MassGIS topographic basemap. These need no API key (CARTO's free tiles started requiring
-  one in September 2026, and Esri's legacy raster basemaps are being sunset). The basemap
-  tiles need internet; every layer the study itself produces is served locally.
-- **Full-reservoir "LiDAR relief"** (`16_reservoir.R`) — the explorer's headline layer.
-  It tiles the *entire* Quabbin land area in MassGIS bare-earth LiDAR and renders each
-  tile as a fine Local Relief Model (elevation minus its local mean over ~13 cells) —
-  the rendering that makes the drowned villages' street plans, house-lot outlines and
-  cellar-hole pits read directly in the bare ground — transparent over water. Broad
-  coverage is ~2 m with a fixed contrast span so tiles match seamlessly; the surviving
-  village sites (Prescott Center, Dana Common) get crisp ~1 m tiles. Turn on **LiDAR relief** in the explorer and zoom in to hunt footprints anywhere the reservoir spared.
-  Cache-guarded twice: the LiDAR downloads (the slow part), and the whole stage — re-runs
-  skip the re-export while `map/data/reservoir_ghost.json` and every overlay it lists
-  exist (delete the manifest to force a rebuild). Exports web overlays +
+  Barre 1894 mosaic, so the whole reservoir is covered), with the present
+  reservoir overlaid in blue so you can see which roads and villages drowned. The
+  four town centres are marked and the routes out to the surviving neighbours are
+  labelled at the frame edges.
+- **The LiDAR imprint survey** (`14_imprints.R`): the relict-landscape survey
+  itself. For the dry land that survives in each town it pulls MassGIS 1 m
+  bare-earth LiDAR (the 2013–2021 statewide DEM ImageServer, public domain;
+  native NAD83 / MA metres, cleaner than the 3DEP seamless used in `12_lidar.R`)
+  and renders a composite relief, an 8-direction hillshade emphasised by a Local
+  Relief Model, that makes faint linear features read. It then auto-traces the
+  relict network: elongated negative relief (sunken roadbeds, cart paths) and
+  elongated positive relief (banks, stone walls), keeping only long, straight
+  connected components on gentle ground so blobs and slope noise are dropped.
+  Every panel is ground-truthed against the 1893 quad. Findings: Prescott is the
+  richest (a clear road plus many lineations); Enfield's dry south (toward Winsor
+  Dam) keeps road traces; Dana's common/ridge keeps a road cut; Greenwich's
+  center is entirely under water (a static "what drowned" panel, no imprints).
+  The auto-trace is a candidate finder. It cannot perfectly separate man-made
+  lines from natural slope features, so the relief itself is the primary evidence
+  and the traces are an explorable overlay. As far as we found, this is a gap in
+  the public record: the lost-town history is well documented (J.R. Greene's
+  *Atlas of the Quabbin Valley*; the Swift River Valley Historical Society) and
+  LiDAR for New England relict landscapes is proven (UConn's Ouimet Lab; Johnson
+  & Ouimet 2014), but the two had not been combined into a LiDAR imprint survey
+  of the four towns. The Prescott Peninsula runs ~12 km, beyond the server's
+  single-export cap, so it is mosaicked from three ~2 m strips into one DEM for
+  full-length coverage. The stage is cache-guarded (it skips any area whose
+  survey figure, and for web areas its trace overlay, already exists), so only
+  the first build pays the render cost. Exported as static survey figures
+  (`output/24_*`) and as auto-trace web overlays (transparent over water) with
+  bounds in `map/data/imprints.json`; the explorer's relief itself comes from the
+  full-reservoir LiDAR relief layer (`16_reservoir.R`).
+- **Interactive imprint explorer**: Leaflet (vendored locally, no CDN
+  dependency), mobile-first: a full-screen map, bottom-sheet Layers control, big
+  touch targets, and zoom to z19. It serves the full-reservoir LiDAR relief
+  (above) as its primary layer, the auto-traced lines, "jump to" buttons (whole
+  reservoir / Prescott Center / Dana Common), the historical map overlays
+  (1890s/1940s, year-selectable), the drowned-town popups, the reservoir-water
+  toggle, and the aqueduct, over MassGIS public tile services: the statewide
+  LiDAR shaded relief with MassGIS road/town labels, or the MassGIS topographic
+  basemap. These need no API key (CARTO's free tiles started requiring one in
+  September 2026, and Esri's legacy raster basemaps are being sunset). The
+  basemap tiles need internet; every layer the study itself produces is served
+  locally.
+- **Full-reservoir "LiDAR relief"** (`16_reservoir.R`): the explorer's headline
+  layer. It tiles the entire Quabbin land area in MassGIS bare-earth LiDAR and
+  renders each tile as a fine Local Relief Model (elevation minus its local mean
+  over ~13 cells), the rendering that makes the drowned villages' street plans,
+  house-lot outlines and cellar-hole pits read directly in the bare ground,
+  transparent over water. Broad coverage is ~2 m with a fixed contrast span so
+  tiles match seamlessly; the surviving village sites (Prescott Center, Dana
+  Common) get crisp ~1 m tiles. Turn on LiDAR relief in the explorer and zoom in
+  to hunt footprints anywhere the reservoir spared. Cache-guarded twice: the
+  LiDAR downloads (the slow part), and the whole stage, since re-runs skip the
+  re-export while `map/data/reservoir_ghost.json` and every overlay it lists
+  exist (delete the manifest to force a rebuild). Exports web overlays plus
   `map/data/reservoir_ghost.json`.
-- **Ground-truth cross-reference** (`15_xref.R`) — closes the loop on the imprints:
-  it extracts the 1893 road network straight from the quad (dark, low-saturation
-  linework, morphologically closed, kept only where elongated → roads, not text),
-  then classifies the LiDAR road traces by proximity — within 14 m of a mapped 1893
-  road = a **confirmed surviving roadbed** (green), the rest unverified (orange).
-  Demonstrated on the mid-peninsula (the old Prescott village area). **Honest limit:**
-  auto-extraction of the scanned linework catches the main roads, not the full
-  network, so "unverified" is *not* "newly discovered"; the explorer's 1893 fade
-  overlay remains the fuller visual ground-truth. Renders `output/25_prescott_xref.png`.
+- **Ground-truth cross-reference** (`15_xref.R`): checks the imprints against
+  the map. It extracts the 1893 road network straight from the quad (dark,
+  low-saturation linework, morphologically closed, kept only where elongated, so
+  roads rather than text), then classifies the LiDAR road traces by proximity:
+  within 14 m of a mapped 1893 road counts as a confirmed surviving roadbed
+  (green), the rest unverified (orange). Demonstrated on the mid-peninsula (the
+  old Prescott village area). Auto-extraction of the scanned linework catches the
+  main roads, not the full network, so "unverified" is not "newly discovered";
+  the explorer's 1893 fade overlay remains the fuller visual ground-truth.
+  Renders `output/25_prescott_xref.png`.
 
 ## Stack
 
@@ -271,9 +279,9 @@ never breaks the run — it degrades to a documented fallback instead.
 
 The study exists in two places:
 
-- **[`mapzimus/quabbin`](https://github.com/mapzimus/quabbin)** — the
-  standalone repository and **source of truth**. Changes are made here first.
-- The **`quabbin/` folder of the portfolio repository**, a copy that serves the
+- [`mapzimus/quabbin`](https://github.com/mapzimus/quabbin), the standalone
+  repository and source of truth. Changes are made here first.
+- The `quabbin/` folder of the portfolio repository, a copy that serves the
   live [project page](https://maxwellhowegis.com/quabbin.html) and the
   [interactive explorer](https://maxwellhowegis.com/quabbin/map/) at
   maxwellhowegis.com. After a change lands in the standalone repo, copy it into
@@ -284,8 +292,8 @@ The study exists in two places:
 The code (the `R/` scripts, `run_all.R`, and the explorer in `map/`) is
 released under the [MIT License](LICENSE). The underlying elevation, LiDAR,
 census, and historical-map data are U.S. public-domain sources, credited in
-[Data, methods, and honest caveats](#data-methods-and-honest-caveats) above.
+[Data, methods, and caveats](#data-methods-and-caveats) above.
 
 ---
 *Part of an ongoing series of multi-layer GIS studies of geography-shaped
-American places. Data is open; figures are reproducible from the scripts above.*
+American places.*

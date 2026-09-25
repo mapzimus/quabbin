@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Quabbin — LiDAR Imprint Explorer | Maxwell Howe GIS</title>
+<title>Quabbin LiDAR Imprint Explorer | Maxwell Howe GIS</title>
 <meta name="description" content="Explore the Quabbin Reservoir's four lost towns in 1 m LiDAR: hunt the relict roads, paths and field walls still imprinted in the ground on the land that never went under, compare the historical 1890s and 1940s surveys, and see the reservoir water over the drowned valley.">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -108,8 +108,8 @@
 
 <div id="about" class="card">
   <h1>The lost towns of the Swift River Valley</h1>
-  <p>Between 1938 and 1946 the Swift River Valley was flooded for the Quabbin Reservoir, erasing four towns — <b>Dana, Enfield, Greenwich, Prescott</b>. On the land that never went under, their <b>street plans, house-lot outlines and cellar holes</b> are still imprinted in the earth.</p>
-  <p>Turn on <b>LiDAR relief</b> and zoom in: the grey is <b>MassGIS 1 m bare-earth LiDAR</b> — the ground with the forest digitally removed — and the old roads, walls and foundations read straight off it. Check what you find against the <b>1890s and 1940s surveys</b>, or turn on the <b>reservoir water</b> to see what drowned.</p>
+  <p>Between 1938 and 1946 the Swift River Valley was flooded for the Quabbin Reservoir, erasing four towns: Dana, Enfield, Greenwich and Prescott. On the land that never went under, their street plans, house-lot outlines and cellar holes are still imprinted in the earth.</p>
+  <p>Turn on <b>LiDAR relief</b> and zoom in. The grey is MassGIS 1 m bare-earth LiDAR, the ground with the forest digitally removed, and the old roads, walls and foundations read straight off it. Check what you find against the <b>Historical map</b> (1890s and 1940s surveys), or turn on <b>Reservoir water</b> to see what drowned.</p>
   <div class="links">
     <a href="../../quabbin.html">← The full study</a>
     <a href="https://github.com/mapzimus/quabbin" target="_blank" rel="noopener">R code ↗</a>
@@ -127,7 +127,7 @@
     <label class="row"><input type="checkbox" id="lRelief"><span class="sw" style="background:#9a9a9a"></span><span class="lab">LiDAR relief (whole reservoir)</span></label>
     <div class="sub" id="reliefSub"><input id="reliefOpacity" type="range" min="0" max="100" value="96" aria-label="LiDAR relief opacity"></div>
     <label class="row"><input type="checkbox" id="lTrace"><span class="sw" style="background:linear-gradient(90deg,var(--road) 50%,var(--wall) 50%)"></span><span class="lab">Traced lines</span></label>
-    <div class="hint">Turn on LiDAR relief and zoom in: the grey is bare-earth LiDAR — hunt the old streets, house-lot outlines and cellar holes. Traced lines are auto-detected candidates: <b style="color:var(--road)">roads &amp; paths</b>, <b style="color:var(--wall)">stone walls</b>.</div>
+    <div class="hint">Turn on LiDAR relief and zoom in. The grey is bare-earth LiDAR; hunt the old streets, house-lot outlines and cellar holes. Traced lines are auto-detected candidates: <b style="color:var(--road)">roads &amp; paths</b>, <b style="color:var(--wall)">stone walls</b>.</div>
     <div class="jump" id="jump"></div>
   </div>
   <div class="grp">
