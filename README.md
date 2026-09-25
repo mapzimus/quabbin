@@ -281,11 +281,22 @@ The study exists in two places:
 
 - [`mapzimus/quabbin`](https://github.com/mapzimus/quabbin), the standalone
   repository and source of truth. Changes are made here first.
-- The `quabbin/` folder of the portfolio repository, a copy that serves the
-  live [project page](https://maxwellhowegis.com/quabbin.html) and the
+- The `quabbin/` path of the portfolio repository, a git submodule pinned to
+  one commit of this repo, which serves the live
+  [project page](https://maxwellhowegis.com/quabbin.html) and the
   [interactive explorer](https://maxwellhowegis.com/quabbin/map/) at
-  maxwellhowegis.com. After a change lands in the standalone repo, copy it into
-  the portfolio folder to publish it.
+  maxwellhowegis.com. The site publishes the pinned commit, not this repo's
+  `main`, so after a change lands here, bump the pin in the portfolio repo
+  (its `DEPLOY.md` documents this):
+
+  ```bash
+  git submodule update --remote quabbin
+  git add quabbin
+  git commit -m "bump quabbin submodule"
+  git push
+  ```
+
+  Pushing to the portfolio's `main` deploys the site.
 
 ## License
 
