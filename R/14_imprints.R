@@ -14,7 +14,7 @@ if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() els
 if (!exists("POOL_M")) source(file.path(QB_DIR, "R", "00_setup.R"))
 source(file.path(QB_DIR, "R", "lidar_utils.R"))
 DIR_WEB <- file.path(QB_DIR, "map", "data"); dir.create(DIR_WEB, recursive = TRUE, showWarnings = FALSE)
-TOPO_1893 <- file.path(DIR_CACHE, "preflood_belchertown_1893.tif")
+TOPO_1893 <- file.path(DIR_CACHE, "htmc_MA_Belchertown_352469_1893_62500_geo_tif")   # the 1893 sheet as 11_preflood.R caches it
 
 # single-window DEM (1 m) or a multi-strip mosaic for long areas (Prescott Peninsula)
 fetch_dem <- function(a) {

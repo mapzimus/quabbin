@@ -45,7 +45,7 @@ pan and zoom across every acre the reservoir spared to hunt the relict **streets
 house-lot outlines and cellar-hole pits** of the drowned villages still imprinted
 in the ground (crisp 1 m tiles at the surviving village sites). Toggle the
 auto-traced lines and the historical ground-truth surveys (1890s and 1940s),
-raise the pool over the valley, and follow the aqueduct east to Boston.
+flood the valley with the reservoir's real extent, and follow the aqueduct east to Boston.
 
 ![Filling the reservoir](output/quabbin_floodfill.gif)
 
@@ -57,7 +57,7 @@ binaries (no source compiles):
 ```bash
 sudo apt-get install -y r-base-core r-cran-sf r-cran-terra r-cran-raster \
     r-cran-ggplot2 r-cran-dplyr libcurl4-openssl-dev libxml2-dev libjpeg-dev
-Rscript -e 'install.packages(c("elevatr","osmdata","tigris","ggspatial","ggnewscale","ggrepel","patchwork"))'
+Rscript -e 'install.packages(c("elevatr","osmdata","tigris","ggspatial","ggnewscale","ggrepel","patchwork","png","curl"))'
 ```
 
 Then, from the study folder:
@@ -97,7 +97,7 @@ quabbin/
 │   ├── 02_build_layers.R  reproject, hillshade, carve the reservoir, assemble layers
 │   ├── 03_maps.R          the six spatial figures (shaded relief + vector overlays)
 │   ├── 04_population.R    the two displacement charts (real census + lifelines)
-│   ├── 05_floodfill.R     schematic reservoir-filling frames + GIF + panel + stage GeoJSON
+│   ├── 05_floodfill.R     schematic reservoir-filling frames + GIF + panel
 │   ├── 06_aqueduct.R      the aqueduct-to-Boston map + infrastructure GeoJSON
 │   ├── 07_export_web.R    export towns/reservoir/watershed GeoJSON for the web map
 │   ├── 08_profile.R       west-east valley cross-section
@@ -163,8 +163,7 @@ never breaks the run — it degrades to a documented fallback instead.
   shallow), scaled to the reservoir's surveyed **~150 ft maximum depth**; the pool
   then rises over that synthetic bed in **equal-area stages**, filling the deep
   central channel first and spreading to the arms (≈7 % → 100 %). Frames become a
-  GIF (ImageMagick), a small-multiples panel, and per-stage GeoJSON for the map
-  slider. It is a schematic of *how* the basin filled (1939–1946), **not surveyed
+  GIF (ImageMagick) and a small-multiples panel. It is a schematic of *how* the basin filled (1939–1946), **not surveyed
   bathymetry** — captioned as such.
 - **Aqueduct & dams** — the route (Quabbin → Wachusett → Boston) and the dams
   (Winsor Dam, Goodnough Dike) are **hand-placed from known coordinates** and
@@ -234,11 +233,14 @@ never breaks the run — it degrades to a documented fallback instead.
   from the full-reservoir LiDAR relief layer (`16_reservoir.R`).
 - **Interactive imprint explorer** — Leaflet (vendored locally, no CDN dependency),
   mobile-first: a full-screen map, bottom-sheet **Layers** control, big touch targets,
-  a full-width pool slider, and zoom to z19. It serves the full-reservoir **LiDAR relief**
-  (above) as its primary layer, the auto-traced lines, "jump to" buttons (whole reservoir /
-  Prescott Center / Dana Common), the historical map overlays (1890s/1940s, year-selectable), the drowned-town popups, the flood
-  stages, and the aqueduct, over Esri World Hillshade + CARTO label tiles. The basemap tiles
-  need internet; every layer the study itself produces is served locally.
+  and zoom to z19. It serves the full-reservoir **LiDAR relief** (above) as its primary
+  layer, the auto-traced lines, "jump to" buttons (whole reservoir / Prescott Center /
+  Dana Common), the historical map overlays (1890s/1940s, year-selectable), the
+  drowned-town popups, the reservoir-water toggle, and the aqueduct, over **MassGIS public
+  tile services** — the statewide LiDAR shaded relief with MassGIS road/town labels, or the
+  MassGIS topographic basemap. These need no API key (CARTO's free tiles started requiring
+  one in September 2026, and Esri's legacy raster basemaps are being sunset). The basemap
+  tiles need internet; every layer the study itself produces is served locally.
 - **Full-reservoir "LiDAR relief"** (`16_reservoir.R`) — the explorer's headline layer.
   It tiles the *entire* Quabbin land area in MassGIS bare-earth LiDAR and renders each
   tile as a fine Local Relief Model (elevation minus its local mean over ~13 cells) —

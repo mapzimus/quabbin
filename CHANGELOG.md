@@ -1,5 +1,78 @@
 # Quabbin study — changelog
 
+## 2026-09-25 — Basemap swap (CARTO tiles now need a key) + audit tune-up
+
+### Explorer basemap → MassGIS public tile services
+- CARTO's free raster basemaps started requiring an API key on 2026-09-23: keyless
+  requests still return HTTP 200, but every tile is stamped **"API KEY REQUIRED"**,
+  so the explorer's label layer and its "Plain map" base were watermarked edge to
+  edge. Esri's `server.arcgisonline.com` raster basemaps (the World Hillshade base)
+  are legacy services on a sunset track. All three basemap layers now come from
+  **MassGIS's public tile services** on ArcGIS Online — no key, no account, and the
+  same Commonwealth LiDAR the study is built on:
+  - **Shaded relief** base: `LiDAR_ShadedRelief` (statewide bare-earth LiDAR
+    hillshade, native to z18 — sharper than the old ~z16 Esri hillshade);
+  - labels: `MassGIS_Basemap_Detailed_Features` (roads with names, town/county
+    labels, transparent PNG, native to z18);
+  - **Topo map** (was "Plain map"): `MassGISBasemap` (contours, hydro, forest,
+    roads and labels, native to z19).
+  A keyless fallback (USGS The National Map, `USGSTopo`, cached to z16) is noted
+  in the source should these services ever move. Outside Massachusetts the relief
+  base is blank; everything the explorer shows is inside the state.
+- Explorer tidy: removed the dead flood-bar CSS left over from the 2026-06-14
+  slider removal (and the panel height that was sized around it); the About
+  panel's "R code" link now points at the standalone repo (`mapzimus/quabbin`,
+  the source of truth) instead of the portfolio folder.
+
+### Pipeline fixes (from the audit; scripts edited, not re-run here)
+- **Stale 1893-quad cache path** — `12_lidar.R`, `13_roads.R` (fallback),
+  `14_imprints.R` and `15_xref.R` all read `data/cache/preflood_belchertown_1893.tif`,
+  a file nothing has written since `11_preflood.R` moved to the two-era mosaics
+  (it caches the sheet as `htmc_MA_Belchertown_352469_1893_62500_geo_tif`). On a
+  fresh cache 12 silently dropped its 1893 panel (caption still promised it), 14
+  lost its ground-truth panel, and 15 would hard-error. All four now point at the
+  file 11 actually caches, and 15 skips with a message if it is absent.
+- `05_floodfill.R`: GIF assembly reported "wrote …" whenever a GIF existed on disk,
+  even when ImageMagick failed; the `ok` result was never read; and it shelled
+  out to `convert` (a filesystem tool on Windows). It now prefers IM7's `magick`,
+  checks the exit status, assembles to a temp file and only then replaces the
+  committed GIF.
+- `08_profile.R`: dropped a redundant `POOL_FT <- POOL_M / 0.3048` that overwrote
+  the `00_setup.R` constant with a float round-trip. `07_export_web.R`: header
+  no longer claims `floodstages.geojson` is written.
+- README reconciled: no more pool slider / flood stages / per-stage GeoJSON in the
+  explorer description; basemap paragraph rewritten; `png` and `curl` added to the
+  install line (used directly by `lidar_utils.R` / `15_xref.R` / the OSM path).
+
+### Audit — open items (not changed in this round)
+- `14_imprints.R` rebuilds `imprints.json` from whatever `.bounds_*` sidecars
+  exist, so regenerating one area on a fresh clone shrinks the manifest to that
+  area; `16_reservoir.R` likewise overwrites `reservoir_ghost.json` with any
+  non-empty set, so a partial MassGIS outage drops explorer tiles. Both should
+  merge by slug into the existing manifest.
+- Cache files (`dem_ll.tif`, `massgis_reservoir.tif`, `massgis_ghost_r*c*.tif`)
+  are keyed by name only; an old `data/cache/` from before the 2026-06-14 extent
+  expansion is silently reused. Fold the bbox into the filename.
+- Every stage's standalone guard assumes the folder is literally named `quabbin`
+  (unlike `00_setup.R`); `12_lidar.R` sources all of `02` though it needs nothing
+  from it; `02_build_layers.R` duplicates `massgis_export` from `lidar_utils.R`.
+- `12_lidar.R`'s 3DEP download has no completeness check (a truncated body is
+  cached forever); reuse the `file.size > 1e5` test from `massgis_export`.
+- The 2026-06-14 entry below says a "build guard refuses to commit" on a coarse-DEM
+  fallback; `02_build_layers.R` only logs it.
+- `map/index.html` sets `user-scalable=no`, which blocks pinch-zooming the UI text.
+
+### Verification
+- Headless Chromium against `map/`: 0 page errors, 0 failed requests, every
+  basemap tile 200 from `tiles.arcgis.com`; screenshots checked at the home view,
+  the topo base, and Prescott Center with LiDAR relief + traces + 1890s overlay.
+  Inline JS passes `node --check`. Before the swap the same run showed the CARTO
+  "API KEY REQUIRED" watermark tiled across the map.
+- All 19 R files parse, and the new GIF block was exercised with a stub
+  ImageMagick on both the success and failure paths (the failure path leaves the
+  committed GIF untouched). The full pipeline was not re-run (no spatial stack in
+  the container); none of the explorer's committed data changed.
+
 ## 2026-06-14 — Explorer: real reservoir-water toggle (dropped the schematic flood slider)
 
 - Removed the explorer's schematic "filling" slider entirely. There is no real

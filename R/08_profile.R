@@ -8,8 +8,6 @@
 if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() else file.path(getwd(), "quabbin")
 if (!exists("dem_ma")) source(file.path(QB_DIR, "R", "02_build_layers.R"))
 
-POOL_FT <- POOL_M / 0.3048
-
 # Footprint elevations, and the raster row where the reservoir is widest.
 demR <- terra::mask(dem_ma, terra::vect(reservoir_ma))
 mm   <- matrix(!is.na(terra::values(demR)[, 1]), nrow = terra::nrow(demR), ncol = terra::ncol(demR), byrow = TRUE)
