@@ -14,7 +14,7 @@
 if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() else file.path(getwd(), "quabbin")
 if (!exists("reservoir_ma")) source(file.path(QB_DIR, "R", "02_build_layers.R"))
 
-TOPO_1893 <- file.path(DIR_CACHE, "preflood_belchertown_1893.tif")  # fetched by 11_preflood.R
+TOPO_1893 <- file.path(DIR_CACHE, "htmc_MA_Belchertown_352469_1893_62500_geo_tif")  # the 1893 sheet as 11_preflood.R caches it
 
 fetch_3dep <- function(bbox, size, dst) {
   if (!file.exists(dst)) {

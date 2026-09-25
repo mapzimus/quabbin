@@ -17,7 +17,7 @@ if (!exists("reservoir_ma")) source(file.path(QB_DIR, "R", "02_build_layers.R"))
 # arm the single Belchertown quad cut off. Falls back to fetching that one quad.
 mos_tif <- file.path(DIR_DATA, "cache", "histmos_1890s.tif")
 if (!file.exists(mos_tif)) {
-  mos_tif <- file.path(DIR_DATA, "cache", "preflood_belchertown_1893.tif")
+  mos_tif <- file.path(DIR_DATA, "cache", "htmc_MA_Belchertown_352469_1893_62500_geo_tif")   # the single sheet, as 11_preflood.R caches it
   if (!file.exists(mos_tif)) {
     dir.create(dirname(mos_tif), recursive = TRUE, showWarnings = FALSE)
     try(download.file("https://prd-tnm.s3.amazonaws.com/StagedProducts/Maps/HistoricalTopo/GeoTIFF/MA/MA_Belchertown_352469_1893_62500_geo.tif",

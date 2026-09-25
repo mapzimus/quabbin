@@ -80,10 +80,16 @@ for (i in seq_along(levels)) {
 }
 hold <- rep(frame_files[length(frame_files)], 4)   # pause on the full pool
 gif  <- file.path(DIR_OUTPUT, "quabbin_floodfill.gif")
-ok <- tryCatch({
-  system2("convert", c("-delay", "45", "-loop", "0", c(frame_files, hold), "-layers", "optimize", gif)); TRUE
-}, warning = function(w) FALSE, error = function(e) FALSE)
-msg(if (file.exists(gif)) sprintf("wrote output/quabbin_floodfill.gif (%.1f MB)", file.size(gif)/1e6) else "GIF assembly skipped (ImageMagick not found)")
+im <- Sys.which(c("magick", "convert")); im <- im[nzchar(im)]   # IM7 `magick` first; `convert` is a filesystem tool on Windows
+if (!length(im)) {
+  msg("GIF assembly skipped (ImageMagick not found)")
+} else {
+  tmp <- tempfile(fileext = ".gif")   # assemble aside so a failed run can't clobber the committed GIF
+  st  <- system2(im[[1]], c("-delay", "45", "-loop", "0", shQuote(c(frame_files, hold)), "-layers", "optimize", shQuote(tmp)))
+  if (identical(st, 0L) && file.exists(tmp) && file.copy(tmp, gif, overwrite = TRUE)) {
+    msg("wrote output/quabbin_floodfill.gif (%.1f MB)", file.size(gif)/1e6)
+  } else msg("GIF assembly FAILED (%s exit status %s); kept the existing GIF", basename(im[[1]]), st)
+}
 
 # --- Small-multiples panel (6 stages) -------------------------------------
 pick <- round(seq(2, length(levels), length.out = 6))

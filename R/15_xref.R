@@ -17,10 +17,12 @@ if (!exists("POOL_M")) source(file.path(QB_DIR, "R", "00_setup.R"))
 source(file.path(QB_DIR, "R", "lidar_utils.R"))
 OUT <- file.path(DIR_OUTPUT, "25_prescott_xref.png")
 STRIP <- file.path(DIR_CACHE, "massgis_prescott_2.tif")   # middle peninsula strip, fetched by 14_imprints
+TOPO_1893 <- file.path(DIR_CACHE, "htmc_MA_Belchertown_352469_1893_62500_geo_tif")   # the 1893 sheet as 11_preflood.R caches it
 if (file.exists(OUT)) { msg("xref: 25_prescott_xref.png cached, skipping") } else if (!file.exists(STRIP)) {
   msg("xref: %s not found (run 14_imprints first); skipping", basename(STRIP))
+} else if (!file.exists(TOPO_1893)) {
+  msg("xref: %s not found (run 11_preflood first); skipping", basename(TOPO_1893))
 } else {
-TOPO_1893 <- file.path(DIR_CACHE, "preflood_belchertown_1893.tif")
 
 dem <- terra::rast(STRIP)[[1]]
 demS <- terra::focal(dem, 3, "mean", na.rm = TRUE); water <- dem <= WATER_LVL; e <- terra::ext(dem)

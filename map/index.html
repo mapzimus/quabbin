@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Quabbin — LiDAR Imprint Explorer | Maxwell Howe GIS</title>
+<title>Quabbin LiDAR Imprint Explorer | Maxwell Howe GIS</title>
 <meta name="description" content="Explore the Quabbin Reservoir's four lost towns in 1 m LiDAR: hunt the relict roads, paths and field walls still imprinted in the ground on the land that never went under, compare the historical 1890s and 1940s surveys, and see the reservoir water over the drowned valley.">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -47,7 +47,7 @@
   #about a:hover{text-decoration:underline}
 
   /* controls panel */
-  #panel{position:absolute;z-index:1001;top:64px;right:10px;width:264px;max-height:calc(100% - 176px);
+  #panel{position:absolute;z-index:1001;top:64px;right:10px;width:264px;max-height:calc(100% - 84px);
          overflow:auto;padding:6px;display:none}
   #panel.show{display:block}
   .grp{padding:6px 8px 2px}
@@ -70,16 +70,6 @@
   .jump button:hover{background:#f2f6fb;border-color:var(--water);color:var(--water)}
   .hint{padding:4px 8px 8px;font-size:11px;line-height:1.5;color:#888}
 
-  /* flood bar */
-  #flood{position:absolute;z-index:1000;bottom:12px;left:50%;transform:translateX(-50%);
-         width:min(620px,calc(100% - 20px));padding:10px 14px;display:flex;align-items:center;gap:12px}
-  #flood .lab{font-size:11px;color:#666;white-space:nowrap}
-  #flood input[type=range]{flex:1;accent-color:var(--water);height:var(--tap)}
-  #flood .read{font-weight:700;font-size:12.5px;color:var(--line);white-space:nowrap;min-width:118px;text-align:right}
-  #flood .read small{display:block;font-weight:500;font-size:9px;letter-spacing:.05em;color:#9a9a9a;text-transform:uppercase}
-  #flood button{flex:none;height:36px;border:0;border-radius:9px;background:var(--water);color:#fff;font-weight:600;font-size:12.5px;padding:0 14px;cursor:pointer}
-  #flood button:hover{background:#21588f}
-
   .leaflet-top.leaflet-left{margin-top:62px}   /* drop the zoom control below the title chip */
   .leaflet-control-attribution{font-size:9.5px}
   .leaflet-popup-content{font-family:Inter,sans-serif;font-size:12.5px;line-height:1.5}
@@ -96,12 +86,8 @@
            padding:8px 8px calc(8px + env(safe-area-inset-bottom));transform:translateY(100%);display:block}
     #panel.show{transform:translateY(0)}
     #panel::before{content:"";display:block;width:38px;height:4px;border-radius:3px;background:#cfcfcf;margin:2px auto 8px}
-    #flood{bottom:10px;width:calc(100% - 16px);padding:8px 10px;gap:8px}
-    #flood .lab{display:none}
-    #flood .read{min-width:auto;font-size:12px}
-    #flood.dim{opacity:0;pointer-events:none}
     .leaflet-control-zoom{display:none}
-    .leaflet-control-scale{display:none}   /* keep the corner clear of the full-width flood bar */
+    .leaflet-control-scale{display:none}   /* keep the bottom edge clear for the bottom-sheet handle */
   }
   @media (max-width:640px) and (prefers-reduced-motion: no-preference){
     #panel{transition:transform .25s ease}
@@ -122,11 +108,11 @@
 
 <div id="about" class="card">
   <h1>The lost towns of the Swift River Valley</h1>
-  <p>Between 1938 and 1946 the Swift River Valley was flooded for the Quabbin Reservoir, erasing four towns — <b>Dana, Enfield, Greenwich, Prescott</b>. On the land that never went under, their <b>street plans, house-lot outlines and cellar holes</b> are still imprinted in the earth.</p>
-  <p>Turn on <b>LiDAR relief</b> and zoom in: the grey is <b>MassGIS 1 m bare-earth LiDAR</b> — the ground with the forest digitally removed — and the old roads, walls and foundations read straight off it. Check what you find against the <b>1890s and 1940s surveys</b>, or turn on the <b>reservoir water</b> to see what drowned.</p>
+  <p>Between 1938 and 1946 the Swift River Valley was flooded for the Quabbin Reservoir, erasing four towns: Dana, Enfield, Greenwich and Prescott. On the land that never went under, their street plans, house-lot outlines and cellar holes are still imprinted in the earth.</p>
+  <p>Turn on <b>LiDAR relief</b> and zoom in. The grey is MassGIS 1 m bare-earth LiDAR, the ground with the forest digitally removed, and the old roads, walls and foundations read straight off it. Check what you find against the <b>Historical map</b> (1890s and 1940s surveys), or turn on <b>Reservoir water</b> to see what drowned.</p>
   <div class="links">
     <a href="../../quabbin.html">← The full study</a>
-    <a href="https://github.com/mapzimus/maxwellhowegis/tree/main/quabbin" target="_blank" rel="noopener">R code ↗</a>
+    <a href="https://github.com/mapzimus/quabbin" target="_blank" rel="noopener">R code ↗</a>
   </div>
 </div>
 
@@ -134,14 +120,14 @@
   <div class="grp">
     <h2>Base</h2>
     <label class="row"><input type="radio" name="base" id="bRelief" checked><span class="lab">Shaded relief</span></label>
-    <label class="row"><input type="radio" name="base" id="bPlain"><span class="lab">Plain map</span></label>
+    <label class="row"><input type="radio" name="base" id="bPlain"><span class="lab">Topo map</span></label>
   </div>
   <div class="grp">
     <h2>LiDAR imprints</h2>
     <label class="row"><input type="checkbox" id="lRelief"><span class="sw" style="background:#9a9a9a"></span><span class="lab">LiDAR relief (whole reservoir)</span></label>
     <div class="sub" id="reliefSub"><input id="reliefOpacity" type="range" min="0" max="100" value="96" aria-label="LiDAR relief opacity"></div>
     <label class="row"><input type="checkbox" id="lTrace"><span class="sw" style="background:linear-gradient(90deg,var(--road) 50%,var(--wall) 50%)"></span><span class="lab">Traced lines</span></label>
-    <div class="hint">Turn on LiDAR relief and zoom in: the grey is bare-earth LiDAR — hunt the old streets, house-lot outlines and cellar holes. Traced lines are auto-detected candidates: <b style="color:var(--road)">roads &amp; paths</b>, <b style="color:var(--wall)">stone walls</b>.</div>
+    <div class="hint">Turn on LiDAR relief and zoom in. The grey is bare-earth LiDAR; hunt the old streets, house-lot outlines and cellar holes. Traced lines are auto-detected candidates: <b style="color:var(--road)">roads &amp; paths</b>, <b style="color:var(--wall)">stone walls</b>.</div>
     <div class="jump" id="jump"></div>
   </div>
   <div class="grp">
@@ -169,9 +155,17 @@ map.attributionControl.addAttribution("LiDAR: MassGIS");
   map.createPane(n); map.getPane(n).style.zIndex=z; if(n==="labels")map.getPane(n).style.pointerEvents="none";
 });
 
-const relief = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}",{attribution:"Hillshade: Esri, USGS",maxNativeZoom:16,maxZoom:19});
-const labels = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png",{pane:"labels",maxNativeZoom:19,maxZoom:19});
-const plain  = L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",{attribution:"© OpenStreetMap, © CARTO",maxNativeZoom:19,maxZoom:19});
+// ---- basemaps: MassGIS public tile services (no API key). CARTO's free tiles began requiring a
+//      key on 2026-09-23 (keyless tiles now render "API KEY REQUIRED") and Esri's legacy
+//      server.arcgisonline.com raster basemaps are being sunset, so the explorer now sits on the
+//      Commonwealth's own statewide LiDAR shaded relief (the same source as the LiDAR relief
+//      layer) with MassGIS road/town labels, and the MassGIS topographic basemap as the alternative.
+//      Keyless fallback if these ever move: USGS The National Map, e.g.
+//      https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x} (cached to z16).
+const MG = "https://tiles.arcgis.com/tiles/hGdibHYSPO59RG1h/arcgis/rest/services/";
+const relief = L.tileLayer(MG+"LiDAR_ShadedRelief/MapServer/tile/{z}/{y}/{x}",{attribution:"Basemap: MassGIS",maxNativeZoom:18,maxZoom:19});
+const labels = L.tileLayer(MG+"MassGIS_Basemap_Detailed_Features/MapServer/tile/{z}/{y}/{x}",{pane:"labels",maxNativeZoom:18,maxZoom:19});
+const plain  = L.tileLayer(MG+"MassGISBasemap/MapServer/tile/{z}/{y}/{x}",{attribution:"Basemap: MassGIS",maxNativeZoom:19,maxZoom:19});
 const reliefBase = L.layerGroup([relief,labels]).addTo(map);
 
 const styles = {

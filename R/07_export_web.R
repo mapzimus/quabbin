@@ -1,7 +1,7 @@
 # 07_export_web.R ---------------------------------------------------------
 # Export the vector layers the interactive Leaflet map consumes, all in
-# EPSG:4326, simplified for the browser. (floodstages/aqueduct/infrastructure
-# are written by 05 & 06.) Writes into map/data/.
+# EPSG:4326, simplified for the browser. (aqueduct/infrastructure are written
+# by 06.) Writes into map/data/.
 # -------------------------------------------------------------------------
 
 if (!exists("QB_DIR")) QB_DIR <- if (basename(getwd()) == "quabbin") getwd() else file.path(getwd(), "quabbin")
